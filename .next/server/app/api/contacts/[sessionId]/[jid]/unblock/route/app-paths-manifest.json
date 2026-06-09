@@ -1,0 +1,3 @@
+{
+  "/api/contacts/[sessionId]/[jid]/unblock/route": "app/api/contacts/[sessionId]/[jid]/unblock/route.js"
+}

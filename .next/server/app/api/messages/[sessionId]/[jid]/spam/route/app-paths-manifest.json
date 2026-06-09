@@ -1,0 +1,3 @@
+{
+  "/api/messages/[sessionId]/[jid]/spam/route": "app/api/messages/[sessionId]/[jid]/spam/route.js"
+}

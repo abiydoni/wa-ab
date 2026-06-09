@@ -1,0 +1,12 @@
+var R=require("../../../../../../chunks/[turbopack]_runtime.js")("server/app/api/chat/[sessionId]/[jid]/presence/route.js")
+R.c("server/chunks/[root-of-the-server]__9029b4c2._.js")
+R.c("server/chunks/[root-of-the-server]__906b923e._.js")
+R.c("server/chunks/node_modules_1da470fb._.js")
+R.c("server/chunks/[root-of-the-server]__ea845f9f._.js")
+R.c("server/chunks/_5662ace4._.js")
+R.c("server/chunks/node_modules_zod_v4_classic_external_fa90cebf.js")
+R.c("server/chunks/node_modules_next_5adfc56a._.js")
+R.c("server/chunks/_4b6fbb3e._.js")
+R.c("server/chunks/ce889_server_app_api_chat_[sessionId]_[jid]_presence_route_actions_ba0ac08c.js")
+R.m(975595)
+module.exports=R.m(975595).exports

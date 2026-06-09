@@ -1,0 +1,3 @@
+{
+  "/api/autoreplies/[sessionId]/[replyId]/route": "app/api/autoreplies/[sessionId]/[replyId]/route.js"
+}

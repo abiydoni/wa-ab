@@ -1,0 +1,111 @@
+{
+  "node": {
+    "40cc8aee5b24347e5e905e2f2f67b569a29eef6d12": {
+      "workers": {
+        "app/dashboard/autoreply/page": {
+          "moduleId": 30053,
+          "async": true,
+          "exportedName": "getAutoReplies",
+          "filename": "src/app/dashboard/autoreply/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/autoreply/page": "action-browser"
+      },
+      "filename": "src/app/dashboard/autoreply/actions.ts",
+      "exportedName": "getAutoReplies"
+    },
+    "60c96aafa52f477f4ff8521aada4dc7e674723215b": {
+      "workers": {
+        "app/dashboard/autoreply/page": {
+          "moduleId": 30053,
+          "async": true,
+          "exportedName": "createAutoReply",
+          "filename": "src/app/dashboard/autoreply/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/autoreply/page": "action-browser"
+      },
+      "filename": "src/app/dashboard/autoreply/actions.ts",
+      "exportedName": "createAutoReply"
+    },
+    "6073a32492134933961239a913728ef767c009e52e": {
+      "workers": {
+        "app/dashboard/autoreply/page": {
+          "moduleId": 30053,
+          "async": true,
+          "exportedName": "deleteAutoReply",
+          "filename": "src/app/dashboard/autoreply/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/autoreply/page": "action-browser"
+      },
+      "filename": "src/app/dashboard/autoreply/actions.ts",
+      "exportedName": "deleteAutoReply"
+    },
+    "40ee19aa8347bda3130b5ef7ae83d8ce625afa85fb": {
+      "workers": {
+        "app/dashboard/chat/page": {
+          "moduleId": 3157,
+          "async": true,
+          "exportedName": "getChatsStatus",
+          "filename": "src/app/dashboard/chat/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/chat/page": "action-browser"
+      },
+      "filename": "src/app/dashboard/chat/actions.ts",
+      "exportedName": "getChatsStatus"
+    },
+    "60e46bf0955b9463e052c2fa0840f9214cc73d7b0e": {
+      "workers": {
+        "app/dashboard/chat/page": {
+          "moduleId": 3157,
+          "async": true,
+          "exportedName": "getChatMessages",
+          "filename": "src/app/dashboard/chat/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/chat/page": "action-browser"
+      },
+      "filename": "src/app/dashboard/chat/actions.ts",
+      "exportedName": "getChatMessages"
+    },
+    "70f3054e23cd6f0aac3b378d9e861d4c8d7ecc8b4d": {
+      "workers": {
+        "app/dashboard/chat/page": {
+          "moduleId": 3157,
+          "async": true,
+          "exportedName": "sendChatMessage",
+          "filename": "src/app/dashboard/chat/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/chat/page": "action-browser"
+      },
+      "filename": "src/app/dashboard/chat/actions.ts",
+      "exportedName": "sendChatMessage"
+    },
+    "403b2db19df737fdba5e55565632fb9a9292ce9e26": {
+      "workers": {
+        "app/dashboard/chat/page": {
+          "moduleId": 3157,
+          "async": true,
+          "exportedName": "sendMediaMessage",
+          "filename": "src/app/dashboard/chat/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/chat/page": "action-browser"
+      },
+      "filename": "src/app/dashboard/chat/actions.ts",
+      "exportedName": "sendMediaMessage"
+    }
+  },
+  "edge": {},
+  "encryptionKey": "B5d+cZskTPjIb53FWYaDHB8is3EE1cRCmvOHjSuQWMo="
+}

@@ -1,0 +1,3 @@
+{
+  "/api/messages/[sessionId]/[jid]/sticker/route": "app/api/messages/[sessionId]/[jid]/sticker/route.js"
+}
