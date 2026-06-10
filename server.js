@@ -468,10 +468,13 @@ app.post('/api/device/test-message', requireAuth, async (req, res) => {
         
         // Force fetch group metadata to ensure Baileys knows the participants 
         // for SenderKey encryption distribution before sending
-        if (jid.startsWith('120') || jid.includes('-')) {
+        if (jid.endsWith('@g.us')) {
             try {
-                // We append @g.us temporarily just for the metadata fetch call
-                await sock.groupMetadata(jid + '@g.us');
+                // Use a 3-second timeout so the API never hangs indefinitely
+                await Promise.race([
+                    sock.groupMetadata(jid),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout fetching metadata')), 3000))
+                ]);
             } catch (err) {
                 console.error(`Gagal mengambil data grup ${jid}:`, err.message);
             }
@@ -643,10 +646,12 @@ app.post('/api/send-message', async (req, res) => {
     try {
         const jid = formatPhone(number);
         
-        if (jid.startsWith('120') || jid.includes('-')) {
+        if (jid.endsWith('@g.us')) {
             try {
-                // We append @g.us temporarily just for the metadata fetch call
-                await sock.groupMetadata(jid + '@g.us');
+                await Promise.race([
+                    sock.groupMetadata(jid),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout fetching metadata')), 3000))
+                ]);
             } catch (err) {
                 console.error(`Gagal mengambil data grup ${jid}:`, err.message);
             }
