@@ -171,7 +171,7 @@ async function startSession(sessionId) {
         printQRInTerminal: false,
         browser: ['Appsbee WA Gateway', 'Chrome', '1.0.0'],
         logger: pino({ level: 'error' }),
-        syncFullHistory: false,
+        syncFullHistory: true,
         getMessage: async (key) => {
             return { conversation: 'hello' }
         }
