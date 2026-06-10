@@ -26,6 +26,9 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
         .tab-content { display: none; animation: fadeIn 0.3s; }
         .tab-content.active { display: block; }
         .tab-btn.active { background-color: #10b981; color: white; border-color: #10b981; }
@@ -57,37 +60,37 @@
 <main class="flex-grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
 
     <!-- Stats Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8">
         <!-- Uptime -->
-        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md transition-all group relative overflow-hidden">
-            <div class="absolute -right-4 -top-4 text-emerald-50 opacity-50 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:server" class="text-8xl"></iconify-icon></div>
+        <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200 hover:shadow-md transition-all group relative overflow-hidden">
+            <div class="absolute -right-4 -top-4 text-emerald-50 opacity-50 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:server" class="text-6xl sm:text-8xl"></iconify-icon></div>
             <div class="relative z-10">
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-2"><iconify-icon icon="mdi:clock-outline" class="text-emerald-500 text-lg"></iconify-icon> Server Uptime</h3>
-                <div class="text-2xl font-black text-slate-800" id="stat-uptime">0 <span class="text-sm font-normal text-slate-500">mnt</span></div>
+                <h3 class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:clock-outline" class="text-emerald-500 text-base sm:text-lg"></iconify-icon> Server Uptime</h3>
+                <div class="text-lg sm:text-2xl font-black text-slate-800 font-mono tracking-tight live-timer" id="stat-uptime" data-uptime="0"><span class="time-text">00:00:00</span></div>
             </div>
         </div>
         <!-- Memory -->
-        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md transition-all group relative overflow-hidden">
-            <div class="absolute -right-4 -top-4 text-blue-50 opacity-50 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:memory" class="text-8xl"></iconify-icon></div>
+        <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200 hover:shadow-md transition-all group relative overflow-hidden">
+            <div class="absolute -right-4 -top-4 text-blue-50 opacity-50 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:memory" class="text-6xl sm:text-8xl"></iconify-icon></div>
             <div class="relative z-10">
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-2"><iconify-icon icon="mdi:chip" class="text-blue-500 text-lg"></iconify-icon> Memory Usage</h3>
-                <div class="text-2xl font-black text-slate-800" id="stat-memory">0 <span class="text-sm font-normal text-slate-500">MB</span></div>
+                <h3 class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:chip" class="text-blue-500 text-base sm:text-lg"></iconify-icon> Memory Usage</h3>
+                <div class="text-xl sm:text-2xl font-black text-slate-800" id="stat-memory">0 <span class="text-xs sm:text-sm font-normal text-slate-500">MB</span></div>
             </div>
         </div>
         <!-- Sent -->
-        <div class="bg-gradient-to-br from-emerald-400 to-teal-600 rounded-2xl p-6 shadow-lg shadow-emerald-500/20 text-white relative overflow-hidden group">
-            <div class="absolute -right-4 -top-4 text-white opacity-10 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:message-arrow-right" class="text-8xl"></iconify-icon></div>
+        <div class="bg-gradient-to-br from-emerald-400 to-teal-600 rounded-2xl p-4 sm:p-6 shadow-lg shadow-emerald-500/20 text-white relative overflow-hidden group">
+            <div class="absolute -right-4 -top-4 text-white opacity-10 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:message-arrow-right" class="text-6xl sm:text-8xl"></iconify-icon></div>
             <div class="relative z-10">
-                <h3 class="text-xs font-bold text-emerald-100 uppercase tracking-wider mb-1 flex items-center gap-2"><iconify-icon icon="mdi:send-check" class="text-lg"></iconify-icon> Pesan Terkirim</h3>
-                <div class="text-3xl font-black" id="stat-sent">0</div>
+                <h3 class="text-[10px] sm:text-xs font-bold text-emerald-100 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:send-check" class="text-base sm:text-lg"></iconify-icon> Pesan Terkirim</h3>
+                <div class="text-2xl sm:text-3xl font-black" id="stat-sent">0</div>
             </div>
         </div>
         <!-- Received -->
-        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 shadow-lg shadow-indigo-500/20 text-white relative overflow-hidden group">
-            <div class="absolute -right-4 -top-4 text-white opacity-10 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:message-arrow-left" class="text-8xl"></iconify-icon></div>
+        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-4 sm:p-6 shadow-lg shadow-indigo-500/20 text-white relative overflow-hidden group">
+            <div class="absolute -right-4 -top-4 text-white opacity-10 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:message-arrow-left" class="text-6xl sm:text-8xl"></iconify-icon></div>
             <div class="relative z-10">
-                <h3 class="text-xs font-bold text-indigo-100 uppercase tracking-wider mb-1 flex items-center gap-2"><iconify-icon icon="mdi:message-badge" class="text-lg"></iconify-icon> Pesan Diterima</h3>
-                <div class="text-3xl font-black" id="stat-received">0</div>
+                <h3 class="text-[10px] sm:text-xs font-bold text-indigo-100 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:message-badge" class="text-base sm:text-lg"></iconify-icon> Pesan Diterima</h3>
+                <div class="text-2xl sm:text-3xl font-black" id="stat-received">0</div>
             </div>
         </div>
     </div>
@@ -95,7 +98,7 @@
     <!-- Registration Bar -->
     <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-8 flex flex-col sm:flex-row gap-3 items-center relative overflow-hidden">
         <div class="absolute w-2 bg-emerald-500 h-full left-0 top-0"></div>
-        <div class="flex-grow flex items-center bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200 transition-all w-full ml-3">
+        <div class="flex-grow flex items-center bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200 transition-all w-full sm:ml-3 ml-0">
             <iconify-icon icon="mdi:identifier" class="text-slate-400 mr-2 text-xl"></iconify-icon>
             <input type="text" id="newSessionId" placeholder="ID Device (Tanpa Spasi, misal: CS-1)" class="bg-transparent border-none outline-none w-full text-sm font-medium placeholder-slate-400">
         </div>
@@ -142,35 +145,35 @@
             <iconify-icon icon="mdi:close" class="text-lg"></iconify-icon>
         </button>
         
-        <div class="p-6 md:p-8 pb-4 border-b border-slate-100">
-            <h2 id="detailTitle" class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+        <div class="p-4 sm:p-6 md:p-8 pb-3 border-b border-slate-100">
+            <h2 id="detailTitle" class="text-lg sm:text-2xl font-bold text-slate-800 flex items-center gap-2">
                 <iconify-icon icon="mdi:cellphone-link" class="text-emerald-500"></iconify-icon> Detail Device
             </h2>
         </div>
         
         <!-- Tabs Nav -->
-        <div class="px-6 md:px-8 pt-4 bg-slate-50/50">
-            <div class="flex flex-wrap gap-2 pb-4">
-                <button class="tab-btn active px-4 py-2 rounded-full text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-2" onclick="switchTab('testTab')">
+        <div class="px-4 sm:px-6 md:px-8 pt-3 sm:pt-4 bg-slate-50/50">
+            <div class="flex flex-nowrap overflow-x-auto gap-2 pb-3 hide-scrollbar">
+                <button class="tab-btn active whitespace-nowrap px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-2" onclick="switchTab('testTab')">
                     <iconify-icon icon="mdi:rocket-launch"></iconify-icon> Uji Pesan
                 </button>
-                <button class="tab-btn px-4 py-2 rounded-full text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-2" onclick="switchTab('groupsTab')">
+                <button class="tab-btn whitespace-nowrap px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-2" onclick="switchTab('groupsTab')">
                     <iconify-icon icon="mdi:account-group"></iconify-icon> Daftar Grup
                 </button>
-                <button class="tab-btn px-4 py-2 rounded-full text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-2" onclick="switchTab('contactsTab')">
+                <button class="tab-btn whitespace-nowrap px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-2" onclick="switchTab('contactsTab')">
                     <iconify-icon icon="mdi:contacts"></iconify-icon> Daftar Kontak
                 </button>
-                <button class="tab-btn px-4 py-2 rounded-full text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-2" onclick="switchTab('apiTab')">
-                    <iconify-icon icon="mdi:code-json"></iconify-icon> Dokumen API
+                <button class="tab-btn whitespace-nowrap px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-2" onclick="switchTab('apiTab')">
+                    <iconify-icon icon="mdi:code-json"></iconify-icon> API Docs
                 </button>
             </div>
         </div>
 
-        <div class="flex-grow overflow-y-auto p-6 md:p-8 bg-white">
+        <div class="flex-grow overflow-y-auto p-4 sm:p-6 md:p-8 bg-white">
             
             <!-- Tab 1: Test Message -->
             <div id="testTab" class="tab-content active">
-                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-sm">
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm">
                     <div class="flex items-center gap-3 mb-4">
                         <div class="bg-blue-100 text-blue-600 p-2 rounded-lg"><iconify-icon icon="mdi:message-fast" class="text-xl"></iconify-icon></div>
                         <div>
@@ -226,8 +229,8 @@
                             <iconify-icon icon="mdi:content-copy"></iconify-icon> Copy
                         </button>
                     </div>
-                    <div class="p-5 overflow-x-auto">
-                        <pre id="curlSnippet" class="text-emerald-400 font-mono text-sm leading-relaxed"></pre>
+                    <div class="p-3 sm:p-5 overflow-x-auto">
+                        <pre id="curlSnippet" class="text-emerald-400 font-mono text-xs sm:text-sm leading-relaxed"></pre>
                     </div>
                 </div>
                 <div class="mt-4 bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700 flex gap-3">
@@ -245,21 +248,13 @@
     let qrCheckInterval;
     let statsInterval;
 
-    function formatUptime(seconds) {
-        if (!seconds) return '0 <span class="text-sm font-normal text-slate-500">mnt</span>';
-        const d = Math.floor(seconds / (3600*24));
-        const h = Math.floor(seconds % (3600*24) / 3600);
-        const m = Math.floor(seconds % 3600 / 60);
-        if(d > 0) return `${d} <span class="text-sm font-normal text-slate-500">hari</span> ${h} <span class="text-sm font-normal text-slate-500">jam</span>`;
-        if(h > 0) return `${h} <span class="text-sm font-normal text-slate-500">jam</span> ${m} <span class="text-sm font-normal text-slate-500">mnt</span>`;
-        return `${m} <span class="text-sm font-normal text-slate-500">mnt</span>`;
-    }
-
     function formatDigitalTimer(seconds) {
-        const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+        if (!seconds) seconds = 0;
+        const d = Math.floor(seconds / (3600 * 24));
+        const h = Math.floor(seconds % (3600 * 24) / 3600).toString().padStart(2, '0');
         const m = Math.floor(seconds % 3600 / 60).toString().padStart(2, '0');
         const s = Math.floor(seconds % 60).toString().padStart(2, '0');
-        return `${h}:${m}:${s}`;
+        return d > 0 ? `${d}d ${h}:${m}:${s}` : `${h}:${m}:${s}`;
     }
 
     setInterval(() => {
@@ -278,7 +273,9 @@
             if(!res.ok) return;
             const data = await res.json();
             
-            document.getElementById('stat-uptime').innerHTML = formatUptime(data.uptime);
+            const uptimeEl = document.getElementById('stat-uptime');
+            uptimeEl.setAttribute('data-uptime', data.uptime || 0);
+            uptimeEl.innerHTML = `<span class="time-text">${formatDigitalTimer(data.uptime)}</span>`;
             document.getElementById('stat-memory').innerHTML = `${Math.round(data.memory / 1024 / 1024)} <span class="text-sm font-normal text-slate-500">MB</span>`;
             document.getElementById('stat-sent').innerText = data.totalSent;
             document.getElementById('stat-received').innerText = data.totalReceived;
@@ -327,13 +324,13 @@
                     <div class="absolute w-1.5 h-full left-0 top-0 ${session.status === 'connected' ? 'bg-emerald-500' : 'bg-slate-200'}"></div>
                     <div class="pl-4">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5 border-b border-slate-100 pb-5">
-                            <div>
-                                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-1">
-                                    <iconify-icon icon="mdi:cellphone-wireless" class="text-slate-400"></iconify-icon> ${session.name} 
-                                    <span class="text-sm font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded">ID: ${session.id}</span>
+                            <div class="w-full sm:w-auto">
+                                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-2 sm:mb-1 flex-wrap">
+                                    <iconify-icon icon="mdi:cellphone-wireless" class="text-slate-400"></iconify-icon> <span class="break-all sm:break-normal">${session.name}</span>
+                                    <span class="text-sm font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded whitespace-nowrap">ID: ${session.id}</span>
                                 </h3>
-                                <div class="flex items-center gap-3">
-                                    <span class="px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1 ${badgeClass}">
+                                <div class="flex flex-wrap items-center gap-2 mt-2">
+                                    <span class="px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1 ${badgeClass} whitespace-nowrap">
                                         <iconify-icon icon="${statusIcon}"></iconify-icon> ${statusText}
                                     </span>
                                     ${timerHtml}
@@ -351,12 +348,12 @@
                         </div>
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between group">
-                                <div>
+                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between group overflow-hidden">
+                                <div class="min-w-0 flex-1">
                                     <div class="text-xs font-bold text-slate-400 uppercase mb-1">API Key</div>
-                                    <code class="text-slate-700 font-mono text-xs">${session.api_key}</code>
+                                    <code class="text-slate-700 font-mono text-xs break-all">${session.api_key}</code>
                                 </div>
-                                <button class="text-slate-400 hover:text-emerald-500 transition-colors p-2" onclick="copyToClipboard('${session.api_key}', this)"><iconify-icon icon="mdi:content-copy" class="text-lg"></iconify-icon></button>
+                                <button class="text-slate-400 hover:text-emerald-500 transition-colors p-2 flex-shrink-0" onclick="copyToClipboard('${session.api_key}', this)"><iconify-icon icon="mdi:content-copy" class="text-lg"></iconify-icon></button>
                             </div>
                             <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col justify-center">
                                 <div class="text-xs font-bold text-slate-400 uppercase mb-1">Webhook URL</div>
@@ -366,9 +363,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="mt-4 flex gap-6 text-sm font-medium text-slate-500">
-                            <span class="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded"><iconify-icon icon="mdi:arrow-top-right"></iconify-icon> Terkirim: ${session.msg_sent || 0}</span>
-                            <span class="flex items-center gap-1 text-indigo-600 bg-indigo-50 px-2 py-1 rounded"><iconify-icon icon="mdi:arrow-bottom-left"></iconify-icon> Diterima: ${session.msg_received || 0}</span>
+                        <div class="mt-4 flex flex-wrap gap-4 text-sm font-medium text-slate-500">
+                            <span class="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded whitespace-nowrap"><iconify-icon icon="mdi:arrow-top-right"></iconify-icon> Terkirim: ${session.msg_sent || 0}</span>
+                            <span class="flex items-center gap-1 text-indigo-600 bg-indigo-50 px-2 py-1 rounded whitespace-nowrap"><iconify-icon icon="mdi:arrow-bottom-left"></iconify-icon> Diterima: ${session.msg_received || 0}</span>
                         </div>
                     </div>
                 `;
