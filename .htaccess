@@ -1,7 +1,2 @@
 RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
-
-# Jika ingin semua traffic dipaksa ke Node.js (termasuk file statis yang tidak ada di public_html)
-# Hapus dua baris RewriteCond di atas.
