@@ -134,6 +134,12 @@ function formatPhone(phone) {
     if (phone.includes('-') && !phone.includes('@')) return phone + '@g.us';
 
     let formatted = phone.replace(/\D/g, '');
+    
+    // Modern WhatsApp group IDs start with 120 and are 18 digits long
+    if (formatted.startsWith('120') && formatted.length >= 18) {
+        return formatted + '@g.us';
+    }
+
     if (formatted.startsWith('0')) formatted = '62' + formatted.slice(1);
     return formatted + '@s.whatsapp.net';
 };
@@ -459,9 +465,9 @@ app.post('/api/device/test-message', requireAuth, async (req, res) => {
 
     try {
         const jid = formatPhone(number);
-        await sock.sendMessage(jid, { text: message });
+        const result = await sock.sendMessage(jid, { text: message });
         if (db) await db.query('UPDATE gateway_devices SET msg_sent = msg_sent + 1 WHERE id = ?', [id]);
-        res.json({ success: true });
+        res.json({ success: true, jid: jid, result: result });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
@@ -624,9 +630,9 @@ app.post('/api/send-message', async (req, res) => {
 
     try {
         const jid = formatPhone(number);
-        await sock.sendMessage(jid, { text: message });
+        const result = await sock.sendMessage(jid, { text: message });
         if (db) await db.query('UPDATE gateway_devices SET msg_sent = msg_sent + 1 WHERE id = ?', [sessionId]);
-        res.json({ status: true, message: 'Message sent successfully!' });
+        res.json({ status: true, message: 'Message sent successfully!', jid: jid, result: result });
     } catch (error) {
         res.status(500).json({ status: false, error: 'Failed to send message.' });
     }

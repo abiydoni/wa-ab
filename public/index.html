@@ -632,9 +632,10 @@
             const data = await res.json();
             
             if(data.success) {
-                resText.innerHTML = '<span class="text-emerald-500 bg-emerald-50 px-4 py-2 rounded-lg inline-block border border-emerald-100"><iconify-icon icon="mdi:check-circle"></iconify-icon> Pesan berhasil terkirim!</span>';
+                resText.innerHTML = `<span class="text-emerald-500 bg-emerald-50 px-4 py-2 rounded-lg inline-block border border-emerald-100"><iconify-icon icon="mdi:check-circle"></iconify-icon> Pesan dikirim ke: ${data.jid}</span>`;
                 document.getElementById('testMessage').value = '';
                 loadStats();
+                console.log('Send Result:', data.result);
             } else {
                 resText.innerHTML = `<span class="text-rose-500 bg-rose-50 px-4 py-2 rounded-lg inline-block border border-rose-100"><iconify-icon icon="mdi:alert-circle"></iconify-icon> Gagal: ${data.error}</span>`;
             }
