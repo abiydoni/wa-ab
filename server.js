@@ -453,36 +453,50 @@ app.post('/api/devices/add', requireAuth, async (req, res) => {
 });
 
 app.post('/api/devices/start', requireAuth, async (req, res) => {
-    const { id } = req.body;
-    stoppedSessions.delete(id);
-    if (!activeSessions.has(id)) {
-        await startSession(id);
+    try {
+        const { id } = req.body;
+        stoppedSessions.delete(id);
+        if (!activeSessions.has(id)) {
+            await startSession(id);
+        }
+        res.json({ success: true });
+    } catch(e) {
+        res.status(500).json({ success: false, error: e.message });
     }
-    res.json({ success: true });
 });
 
 app.post('/api/devices/stop', requireAuth, async (req, res) => {
-    const { id } = req.body;
-    stoppedSessions.add(id);
-    const sock = activeSessions.get(id);
-    if (sock) {
-        sock.end(undefined);
-        activeSessions.delete(id); // Force immediate state change
+    try {
+        const { id } = req.body;
+        stoppedSessions.add(id);
+        const sock = activeSessions.get(id);
+        if (sock) {
+            if (sock.ws) sock.ws.close();
+            else if (sock.end) sock.end(undefined);
+            activeSessions.delete(id); // Force immediate state change
+        }
+        res.json({ success: true });
+    } catch(e) {
+        res.status(500).json({ success: false, error: e.message });
     }
-    res.json({ success: true });
 });
 
 app.post('/api/devices/restart', requireAuth, async (req, res) => {
-    const { id } = req.body;
-    stoppedSessions.delete(id);
-    const sock = activeSessions.get(id);
-    if (sock) {
-        sock.end(undefined);
-        activeSessions.delete(id); // Force immediate state change
-    } else {
-        await startSession(id);
+    try {
+        const { id } = req.body;
+        stoppedSessions.delete(id);
+        const sock = activeSessions.get(id);
+        if (sock) {
+            if (sock.ws) sock.ws.close();
+            else if (sock.end) sock.end(undefined);
+            activeSessions.delete(id); // Force immediate state change
+        } else {
+            await startSession(id);
+        }
+        res.json({ success: true });
+    } catch(e) {
+        res.status(500).json({ success: false, error: e.message });
     }
-    res.json({ success: true });
 });
 
 app.post('/api/devices/update', requireAuth, async (req, res) => {

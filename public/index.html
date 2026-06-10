@@ -435,11 +435,19 @@
         let actionName = action === 'start' ? 'menjalankan' : (action === 'stop' ? 'menghentikan' : 'me-restart');
         if(!confirm(`Yakin ingin ${actionName} device ${id}?`)) return;
         
-        await fetch(`${API_BASE}/devices/${action}`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ id })
-        });
+        try {
+            const res = await fetch(`${API_BASE}/devices/${action}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                alert('Gagal: ' + (data.error || 'Unknown error'));
+            }
+        } catch(e) {
+            alert('Error: ' + e.message);
+        }
         loadSessions();
     }
 
