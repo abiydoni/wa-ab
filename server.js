@@ -125,13 +125,13 @@ async function initDatabase() {
 // WHATSAPP ENGINE
 // ==========================================
 // Utility function to format phone number
-function formatPhone(phone) {
-    if (!phone) return '';
+const formatPhone = (phone) => {
+    if (!phone) return phone;
     phone = phone.trim();
-    if (phone.endsWith('@g.us') || phone.endsWith('@s.whatsapp.net')) return phone;
+    if (phone.includes('@')) return phone;
     
     // If it looks like a group ID without @g.us (e.g. contains hyphen)
-    if (phone.includes('-') && !phone.includes('@')) return phone + '@g.us';
+    if (phone.includes('-')) return phone + '@g.us';
 
     let formatted = phone.replace(/\D/g, '');
     
