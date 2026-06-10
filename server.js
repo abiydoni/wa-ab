@@ -34,6 +34,7 @@ const sessionsDir = path.join(__dirname, 'sessions');
 
 // Store active socket connections and QR codes
 const activeSessions = new Map();
+const authStates = new Map();
 const qrCodes = new Map();
 const reconnectingSessions = new Set();
 const stoppedSessions = new Set();
@@ -137,8 +138,14 @@ function formatPhone(phone) {
 
 async function startSession(sessionId) {
     const sessionPath = path.join(sessionsDir, sessionId);
-    const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-
+    
+    let authState = authStates.get(sessionId);
+    if (!authState) {
+        authState = await useMultiFileAuthState(sessionPath);
+        authStates.set(sessionId, authState);
+    }
+    
+    const { state, saveCreds } = authState;
     const { version, isLatest } = await fetchLatestBaileysVersion();
 
     if (!sessionContacts.has(sessionId)) {
@@ -183,8 +190,7 @@ async function startSession(sessionId) {
             } else if (!isStoppedByUser) {
                 fs.rmSync(sessionPath, { recursive: true, force: true });
                 sessionContacts.delete(sessionId);
-                // Also remove from DB
-                if(db) await db.query('DELETE FROM gateway_devices WHERE id = ?', [sessionId]);
+                authStates.delete(sessionId);
             }
         } else if (connection === 'open') {
             sock.connectedAt = Date.now();
@@ -521,6 +527,7 @@ app.delete('/api/devices/delete', requireAuth, async (req, res) => {
         await sock.logout();
         activeSessions.delete(sessionId);
         qrCodes.delete(sessionId);
+        authStates.delete(sessionId);
     } else {
         const sessionPath = path.join(sessionsDir, sessionId);
         if (fs.existsSync(sessionPath)) fs.rmSync(sessionPath, { recursive: true, force: true });
