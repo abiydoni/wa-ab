@@ -441,7 +441,14 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ id, action })
             });
-            const data = await res.json();
+            const text = await res.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch(e) {
+                alert('Server mengembalikan HTML/Error:\n\n' + text.substring(0, 200));
+                return;
+            }
             if (!data.success) {
                 alert('Gagal: ' + (data.error || 'Unknown error'));
             }
