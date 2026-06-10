@@ -225,6 +225,35 @@ async function startSession(sessionId) {
         }
     });
 
+    sock.ev.on('contacts.update', (updates) => {
+        const map = sessionContacts.get(sessionId);
+        for (const update of updates) {
+            if (update.id && (update.name || update.notify || update.verifiedName)) {
+                map.set(update.id, update.name || update.notify || update.verifiedName || update.id.split('@')[0]);
+            }
+        }
+    });
+
+    sock.ev.on('messaging-history.set', ({ chats, contacts }) => {
+        const map = sessionContacts.get(sessionId);
+        if (contacts) {
+            for (const contact of contacts) {
+                if (contact.id) {
+                    map.set(contact.id, contact.name || contact.notify || contact.verifiedName || contact.id.split('@')[0]);
+                }
+            }
+        }
+        if (chats) {
+            for (const chat of chats) {
+                if (chat.id && !chat.id.includes('@g.us') && !chat.id.includes('@broadcast')) {
+                    if (!map.has(chat.id)) {
+                        map.set(chat.id, chat.name || chat.id.split('@')[0]);
+                    }
+                }
+            }
+        }
+    });
+
     // WEBHOOK LOGIC: Send incoming messages to client apps
     sock.ev.on('messages.upsert', async m => {
         if (!m.messages || m.messages.length === 0) return;
