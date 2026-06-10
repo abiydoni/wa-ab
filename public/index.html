@@ -327,6 +327,10 @@
                     badgeClass = 'bg-amber-100 text-amber-700 border-amber-200';
                     statusIcon = 'mdi:qrcode-scan';
                     statusText = 'Waiting QR / Starting';
+                } else if (session.status === 'stopped') {
+                    badgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
+                    statusIcon = 'mdi:stop-circle-outline';
+                    statusText = 'Stopped';
                 }
 
                 const card = document.createElement('div');
@@ -347,14 +351,23 @@
                                     ${timerHtml}
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                                 ${session.status === 'connected' ? 
                                     `<button class="flex-1 sm:flex-none bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white border border-blue-200 hover:border-blue-600 px-4 py-2 rounded-xl text-sm font-bold transition-colors flex justify-center items-center gap-2" onclick="openDetailModal('${session.id}', '${session.name}', '${session.api_key}')"><iconify-icon icon="mdi:tune-vertical"></iconify-icon> Detail & Alat</button>` : 
-                                    `<button class="flex-1 sm:flex-none bg-amber-50 hover:bg-amber-500 text-amber-600 hover:text-white border border-amber-200 hover:border-amber-500 px-4 py-2 rounded-xl text-sm font-bold transition-colors flex justify-center items-center gap-2" onclick="showQR('${session.id}')"><iconify-icon icon="mdi:qrcode"></iconify-icon> Lihat QR</button>`
+                                    (session.status === 'stopped' ? '' : `<button class="flex-1 sm:flex-none bg-amber-50 hover:bg-amber-500 text-amber-600 hover:text-white border border-amber-200 hover:border-amber-500 px-4 py-2 rounded-xl text-sm font-bold transition-colors flex justify-center items-center gap-2" onclick="showQR('${session.id}')"><iconify-icon icon="mdi:qrcode"></iconify-icon> Lihat QR</button>`)
                                 }
-                                <button class="bg-rose-50 hover:bg-rose-500 text-rose-500 hover:text-white border border-rose-200 hover:border-rose-500 w-10 h-10 rounded-xl flex items-center justify-center transition-colors" onclick="deleteSession('${session.id}')" title="Hapus Device">
-                                    <iconify-icon icon="mdi:delete" class="text-lg"></iconify-icon>
-                                </button>
+                                
+                                <div class="flex items-center gap-1 border border-slate-200 rounded-xl p-1 bg-slate-50 w-full sm:w-auto justify-center">
+                                    ${session.status === 'stopped' ? 
+                                        `<button class="w-8 h-8 flex items-center justify-center rounded-lg text-emerald-600 hover:bg-emerald-500 hover:text-white transition-colors" onclick="controlSession('${session.id}', 'start')" title="Start Device"><iconify-icon icon="mdi:play" class="text-xl"></iconify-icon></button>` :
+                                        `<button class="w-8 h-8 flex items-center justify-center rounded-lg text-amber-600 hover:bg-amber-500 hover:text-white transition-colors" onclick="controlSession('${session.id}', 'stop')" title="Stop Device"><iconify-icon icon="mdi:stop" class="text-xl"></iconify-icon></button>
+                                         <button class="w-8 h-8 flex items-center justify-center rounded-lg text-blue-600 hover:bg-blue-500 hover:text-white transition-colors" onclick="controlSession('${session.id}', 'restart')" title="Restart Device"><iconify-icon icon="mdi:restart" class="text-xl"></iconify-icon></button>`
+                                    }
+                                    <div class="w-px h-5 bg-slate-300 mx-1"></div>
+                                    <button class="w-8 h-8 flex items-center justify-center rounded-lg text-rose-500 hover:bg-rose-500 hover:text-white transition-colors" onclick="deleteSession('${session.id}')" title="Hapus Device">
+                                        <iconify-icon icon="mdi:delete" class="text-lg"></iconify-icon>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         
@@ -415,6 +428,18 @@
     async function deleteSession(id) {
         if(!confirm(`Yakin ingin menghapus Device/Klien ${id}? Semua data sesi akan hilang.`)) return;
         await fetch(`${API_BASE}/devices/delete?id=${id}`, { method: 'DELETE' });
+        loadSessions();
+    }
+
+    async function controlSession(id, action) {
+        let actionName = action === 'start' ? 'menjalankan' : (action === 'stop' ? 'menghentikan' : 'me-restart');
+        if(!confirm(`Yakin ingin ${actionName} device ${id}?`)) return;
+        
+        await fetch(`${API_BASE}/devices/${action}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id })
+        });
         loadSessions();
     }
 

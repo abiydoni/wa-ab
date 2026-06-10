@@ -27,6 +27,7 @@ const sessionsDir = path.join(__dirname, 'sessions');
 const activeSessions = new Map();
 const qrCodes = new Map();
 const reconnectingSessions = new Set();
+const stoppedSessions = new Set();
 
 const sessionContacts = new Map();
 
@@ -156,7 +157,8 @@ async function startSession(sessionId) {
         }
 
         if (connection === 'close') {
-            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            const isStoppedByUser = stoppedSessions.has(sessionId);
+            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut && !isStoppedByUser;
             activeSessions.delete(sessionId);
             qrCodes.delete(sessionId);
 
@@ -169,7 +171,7 @@ async function startSession(sessionId) {
                         startSession(sessionId);
                     }, 5000);
                 }
-            } else {
+            } else if (!isStoppedByUser) {
                 fs.rmSync(sessionPath, { recursive: true, force: true });
                 sessionContacts.delete(sessionId);
                 // Also remove from DB
@@ -288,8 +290,15 @@ app.get('/api/devices', requireAuth, async (req, res) => {
         const sock = activeSessions.get(device.id);
         const hasSessionFolder = fs.existsSync(path.join(sessionsDir, device.id));
         let status = 'disconnected';
-        if (sock && sock.user) status = 'connected';
-        else if (activeSessions.has(device.id) || hasSessionFolder) status = 'starting_or_waiting_qr';
+        if (sock && sock.user) {
+            status = 'connected';
+        } else if (activeSessions.has(device.id)) {
+            status = 'starting_or_waiting_qr';
+        } else if (stoppedSessions.has(device.id)) {
+            status = 'stopped';
+        } else if (hasSessionFolder) {
+            status = 'starting_or_waiting_qr';
+        }
 
         let uptimeSeconds = 0;
         if (status === 'connected') {
@@ -441,6 +450,37 @@ app.post('/api/devices/add', requireAuth, async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
+});
+
+app.post('/api/devices/start', requireAuth, async (req, res) => {
+    const { id } = req.body;
+    stoppedSessions.delete(id);
+    if (!activeSessions.has(id)) {
+        await startSession(id);
+    }
+    res.json({ success: true });
+});
+
+app.post('/api/devices/stop', requireAuth, async (req, res) => {
+    const { id } = req.body;
+    stoppedSessions.add(id);
+    const sock = activeSessions.get(id);
+    if (sock) {
+        sock.end(undefined);
+    }
+    res.json({ success: true });
+});
+
+app.post('/api/devices/restart', requireAuth, async (req, res) => {
+    const { id } = req.body;
+    stoppedSessions.delete(id);
+    const sock = activeSessions.get(id);
+    if (sock) {
+        sock.end(undefined);
+    } else {
+        await startSession(id);
+    }
+    res.json({ success: true });
 });
 
 app.post('/api/devices/update', requireAuth, async (req, res) => {
