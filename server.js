@@ -163,10 +163,15 @@ async function startSession(sessionId) {
     console.log(`Starting session: ${sessionId}`);
 
     const sock = makeWASocket({
-        auth: state,
+        version,
+        auth: {
+            creds: state.creds,
+            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
+        },
         printQRInTerminal: false,
         browser: ['Appsbee WA Gateway', 'Chrome', '1.0.0'],
-        logger: pino({ level: 'silent' })
+        logger: pino({ level: 'error' }),
+        syncFullHistory: true
     });
 
     sock.ev.on('connection.update', async (update) => {
@@ -440,9 +445,14 @@ app.get('/api/device/details', requireAuth, async (req, res) => {
     let groups = [];
     if (sock && sock.user) {
         try {
-            const groupsDict = await sock.groupFetchAllParticipating();
+            const groupsDict = await Promise.race([
+                sock.groupFetchAllParticipating(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout fetching groups')), 3000))
+            ]);
             groups = Object.values(groupsDict).map(g => ({ id: g.id, name: g.subject }));
-        } catch(e) {}
+        } catch(e) {
+            console.error("Group fetch error:", e.message);
+        }
     }
 
     let contacts = [];
@@ -468,47 +478,6 @@ app.post('/api/device/test-message', requireAuth, async (req, res) => {
         res.status(500).json({ error: e.message });
     }
 });
-
-// GET Global Stats
-app.get('/api/stats', requireAuth, async (req, res) => {
-    if (!db) return res.status(500).json({ error: "DB not ready" });
-    const [rows] = await db.query('SELECT SUM(msg_sent) as total_sent, SUM(msg_received) as total_received FROM gateway_devices');
-    const totalSent = rows[0].total_sent || 0;
-    const totalReceived = rows[0].total_received || 0;
-    
-    res.json({
-        uptime: process.uptime(),
-        memory: process.memoryUsage().rss,
-        totalDevices: activeSessions.size,
-        totalSent,
-        totalReceived
-    });
-});
-
-// GET Device Details (Contacts, Groups)
-app.get('/api/device/details', requireAuth, async (req, res) => {
-    const { id } = req.query;
-    if (!id) return res.status(400).json({ error: "ID required" });
-
-    const sock = activeSessions.get(id);
-    let groups = [];
-    if (sock && sock.user) {
-        try {
-            const groupsDict = await sock.groupFetchAllParticipating();
-            groups = Object.values(groupsDict).map(g => ({ id: g.id, name: g.subject }));
-        } catch(e) {}
-    }
-
-    let contacts = [];
-    if (sessionContacts.has(id)) {
-        contacts = Array.from(sessionContacts.get(id).entries())
-            .filter(([jid, name]) => jid && jid.endsWith('@s.whatsapp.net'))
-            .map(([jid, name]) => ({ jid, name }));
-    }
-
-    res.json({ groups, contacts });
-});
-
 
 
 app.post('/api/devices/add', requireAuth, async (req, res) => {
