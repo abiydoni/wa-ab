@@ -484,16 +484,6 @@ app.post('/api/devices/action', requireAuth, async (req, res) => {
                 else if (sock.end) sock.end(undefined);
                 activeSessions.delete(id); // Force immediate state change
             }
-        } else if (action === 'restart') {
-            stoppedSessions.delete(id);
-            const sock = activeSessions.get(id);
-            if (sock) {
-                if (sock.ws) sock.ws.close();
-                else if (sock.end) sock.end(undefined);
-                activeSessions.delete(id); // Force immediate state change
-            } else {
-                await startSession(id);
-            }
         } else {
             return res.status(400).json({ success: false, error: "Invalid action" });
         }
