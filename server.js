@@ -16,6 +16,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 const session = require('express-session');
 const axios = require('axios');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 app.use(express.json());
@@ -108,7 +109,8 @@ async function initDatabase() {
         // 3. Insert default admin if not exists
         const [admins] = await db.query('SELECT * FROM admin_users');
         if (admins.length === 0) {
-            await db.query('INSERT INTO admin_users (username, password) VALUES (?, ?)', ['admin', 'admin123']);
+            const defaultHash = await bcrypt.hash('admin123', 10);
+            await db.query('INSERT INTO admin_users (username, password) VALUES (?, ?)', ['admin', defaultHash]);
             console.log("✅ Default Admin Created (admin / admin123)");
         }
 
@@ -277,14 +279,85 @@ app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     if (!db) return res.status(500).json({ error: "Database not ready" });
 
-    const [rows] = await db.query('SELECT * FROM admin_users WHERE username = ? AND password = ?', [username, password]);
+    const [rows] = await db.query('SELECT * FROM admin_users WHERE username = ?', [username]);
     
     if (rows.length > 0) {
-        req.session.isLoggedIn = true;
-        req.session.username = username;
-        res.json({ success: true });
+        const user = rows[0];
+        let isValid = false;
+        
+        // Try bcrypt compare first
+        if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
+            isValid = await bcrypt.compare(password, user.password);
+        } else {
+            // Plaintext fallback for old accounts
+            isValid = (user.password === password);
+            if (isValid) {
+                // Seamlessly upgrade to hashed password
+                const hashed = await bcrypt.hash(password, 10);
+                await db.query('UPDATE admin_users SET password = ? WHERE id = ?', [hashed, user.id]);
+            }
+        }
+
+        if (isValid) {
+            req.session.isLoggedIn = true;
+            req.session.username = username;
+            req.session.userId = user.id;
+            res.json({ success: true });
+        } else {
+            res.status(401).json({ success: false, message: "Username atau password salah!" });
+        }
     } else {
         res.status(401).json({ success: false, message: "Username atau password salah!" });
+    }
+});
+
+// --- User Management APIs ---
+
+app.get('/api/users', requireAuth, async (req, res) => {
+    try {
+        const [rows] = await db.query('SELECT id, username FROM admin_users');
+        res.json({ success: true, data: rows });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/users', requireAuth, async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) return res.status(400).json({ success: false, error: "Username and password required" });
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await db.query('INSERT INTO admin_users (username, password) VALUES (?, ?)', [username, hashedPassword]);
+        res.json({ success: true });
+    } catch (err) {
+        if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ success: false, error: "Username sudah ada" });
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.put('/api/users/:id/password', requireAuth, async (req, res) => {
+    try {
+        const { password } = req.body;
+        const { id } = req.params;
+        if (!password) return res.status(400).json({ success: false, error: "Password required" });
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await db.query('UPDATE admin_users SET password = ? WHERE id = ?', [hashedPassword, id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.delete('/api/users/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        // Prevent deleting the currently logged-in user if it's the last one?
+        // Let's just allow it, or check if it's the current user.
+        if (id == req.session.userId) return res.status(400).json({ success: false, error: "Tidak bisa menghapus akun yang sedang dipakai login" });
+        await db.query('DELETE FROM admin_users WHERE id = ?', [id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 
