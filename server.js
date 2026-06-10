@@ -169,9 +169,13 @@ async function startSession(sessionId) {
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
         },
         printQRInTerminal: false,
-        browser: ['Appsbee WA Gateway', 'Chrome', '1.0.0'],
+        browser: ['Ubuntu', 'Chrome', '20.0.04'],
         logger: pino({ level: 'error' }),
-        syncFullHistory: false
+        markOnlineOnConnect: true,
+        syncFullHistory: false,
+        getMessage: async (key) => {
+            return { conversation: 'hello' }
+        }
     });
 
     sock.ev.on('connection.update', async (update) => {
