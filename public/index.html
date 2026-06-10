@@ -436,10 +436,10 @@
         if(!confirm(`Yakin ingin ${actionName} device ${id}?`)) return;
         
         try {
-            const res = await fetch(`${API_BASE}/devices/${action}`, {
+            const res = await fetch(`${API_BASE}/devices/action`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id })
+                body: JSON.stringify({ id, action })
             });
             const data = await res.json();
             if (!data.success) {

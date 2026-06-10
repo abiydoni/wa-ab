@@ -452,47 +452,37 @@ app.post('/api/devices/add', requireAuth, async (req, res) => {
     }
 });
 
-app.post('/api/devices/start', requireAuth, async (req, res) => {
+app.post('/api/devices/action', requireAuth, async (req, res) => {
     try {
-        const { id } = req.body;
-        stoppedSessions.delete(id);
-        if (!activeSessions.has(id)) {
-            await startSession(id);
-        }
-        res.json({ success: true });
-    } catch(e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
-});
-
-app.post('/api/devices/stop', requireAuth, async (req, res) => {
-    try {
-        const { id } = req.body;
-        stoppedSessions.add(id);
-        const sock = activeSessions.get(id);
-        if (sock) {
-            if (sock.ws) sock.ws.close();
-            else if (sock.end) sock.end(undefined);
-            activeSessions.delete(id); // Force immediate state change
-        }
-        res.json({ success: true });
-    } catch(e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
-});
-
-app.post('/api/devices/restart', requireAuth, async (req, res) => {
-    try {
-        const { id } = req.body;
-        stoppedSessions.delete(id);
-        const sock = activeSessions.get(id);
-        if (sock) {
-            if (sock.ws) sock.ws.close();
-            else if (sock.end) sock.end(undefined);
-            activeSessions.delete(id); // Force immediate state change
+        const { id, action } = req.body;
+        
+        if (action === 'start') {
+            stoppedSessions.delete(id);
+            if (!activeSessions.has(id)) {
+                await startSession(id);
+            }
+        } else if (action === 'stop') {
+            stoppedSessions.add(id);
+            const sock = activeSessions.get(id);
+            if (sock) {
+                if (sock.ws) sock.ws.close();
+                else if (sock.end) sock.end(undefined);
+                activeSessions.delete(id); // Force immediate state change
+            }
+        } else if (action === 'restart') {
+            stoppedSessions.delete(id);
+            const sock = activeSessions.get(id);
+            if (sock) {
+                if (sock.ws) sock.ws.close();
+                else if (sock.end) sock.end(undefined);
+                activeSessions.delete(id); // Force immediate state change
+            } else {
+                await startSession(id);
+            }
         } else {
-            await startSession(id);
+            return res.status(400).json({ success: false, error: "Invalid action" });
         }
+        
         res.json({ success: true });
     } catch(e) {
         res.status(500).json({ success: false, error: e.message });
