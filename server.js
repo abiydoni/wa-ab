@@ -160,8 +160,11 @@ async function startSession(sessionId) {
         version,
         auth: state,
         printQRInTerminal: false,
-        browser: ['Gateway', 'Chrome', '1.0.0'],
-        logger: pino({ level: 'error' }) // Changed to 'error' to see what causes the crash
+        browser: ['Appsbee WA Gateway', 'Chrome', '1.0.0'],
+        logger: pino({ level: 'error' }),
+        syncFullHistory: false,
+        generateHighQualityLinkPreviews: true,
+        getMessage: async (key) => { return { conversation: 'hello' } }
     });
 
     sock.ev.on('connection.update', async (update) => {
@@ -456,12 +459,7 @@ app.post('/api/device/test-message', requireAuth, async (req, res) => {
 
     try {
         const jid = formatPhone(number);
-        const [result] = await sock.onWhatsApp(jid);
-        if (!result || !result.exists) {
-            return res.status(400).json({ error: "Nomor tujuan tidak terdaftar di WhatsApp!" });
-        }
-        
-        await sock.sendMessage(result.jid, { text: message });
+        await sock.sendMessage(jid, { text: message });
         if (db) await db.query('UPDATE gateway_devices SET msg_sent = msg_sent + 1 WHERE id = ?', [id]);
         res.json({ success: true });
     } catch (e) {
@@ -626,12 +624,7 @@ app.post('/api/send-message', async (req, res) => {
 
     try {
         const jid = formatPhone(number);
-        const [result] = await sock.onWhatsApp(jid);
-        if (!result || !result.exists) {
-            return res.status(400).json({ status: false, error: "Nomor tujuan tidak terdaftar di WhatsApp!" });
-        }
-
-        await sock.sendMessage(result.jid, { text: message });
+        await sock.sendMessage(jid, { text: message });
         if (db) await db.query('UPDATE gateway_devices SET msg_sent = msg_sent + 1 WHERE id = ?', [sessionId]);
         res.json({ status: true, message: 'Message sent successfully!' });
     } catch (error) {
