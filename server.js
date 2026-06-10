@@ -127,24 +127,21 @@ async function initDatabase() {
 // Utility function to format phone number
 function formatPhone(phone) {
     if (!phone) return '';
+    phone = phone.trim();
+    if (phone.endsWith('@g.us') || phone.endsWith('@s.whatsapp.net')) return phone;
     
-    // Remove @g.us or @s.whatsapp.net if user inputted them
-    phone = phone.trim().replace('@g.us', '').replace('@s.whatsapp.net', '');
+    // If it looks like a group ID without @g.us (e.g. contains hyphen)
+    if (phone.includes('-') && !phone.includes('@')) return phone + '@g.us';
 
     let formatted = phone.replace(/\D/g, '');
     
-    // Format to 62 if starts with 0
-    if (formatted.startsWith('0')) {
-        formatted = '62' + formatted.slice(1);
+    // Modern WhatsApp group IDs start with 120 and are 18 digits long
+    if (formatted.startsWith('120') && formatted.length >= 18) {
+        return formatted + '@g.us';
     }
-    
-    // Append @s.whatsapp.net ONLY for personal numbers, do NOT append @g.us
-    if (!formatted.startsWith('120') && !formatted.includes('-')) {
-        return formatted + '@s.whatsapp.net';
-    }
-    
-    // For groups, return bare number or @g.us based on user request (they want it removed)
-    return formatted; // Return bare number without @g.us
+
+    if (formatted.startsWith('0')) formatted = '62' + formatted.slice(1);
+    return formatted + '@s.whatsapp.net';
 };
 
 async function startSession(sessionId) {
