@@ -456,7 +456,12 @@ app.post('/api/device/test-message', requireAuth, async (req, res) => {
 
     try {
         const jid = formatPhone(number);
-        await sock.sendMessage(jid, { text: message });
+        const [result] = await sock.onWhatsApp(jid);
+        if (!result || !result.exists) {
+            return res.status(400).json({ error: "Nomor tujuan tidak terdaftar di WhatsApp!" });
+        }
+        
+        await sock.sendMessage(result.jid, { text: message });
         if (db) await db.query('UPDATE gateway_devices SET msg_sent = msg_sent + 1 WHERE id = ?', [id]);
         res.json({ success: true });
     } catch (e) {
@@ -504,21 +509,7 @@ app.get('/api/device/details', requireAuth, async (req, res) => {
     res.json({ groups, contacts });
 });
 
-// POST Test Message from Dashboard
-app.post('/api/device/test-message', requireAuth, async (req, res) => {
-    const { id, number, message } = req.body;
-    const sock = activeSessions.get(id);
-    if (!sock || !sock.user) return res.status(400).json({ error: "Device is disconnected" });
 
-    try {
-        const jid = formatPhone(number);
-        await sock.sendMessage(jid, { text: message });
-        if (db) await db.query('UPDATE gateway_devices SET msg_sent = msg_sent + 1 WHERE id = ?', [id]);
-        res.json({ success: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
 
 app.post('/api/devices/add', requireAuth, async (req, res) => {
     const { id, name } = req.body;
@@ -635,7 +626,12 @@ app.post('/api/send-message', async (req, res) => {
 
     try {
         const jid = formatPhone(number);
-        await sock.sendMessage(jid, { text: message });
+        const [result] = await sock.onWhatsApp(jid);
+        if (!result || !result.exists) {
+            return res.status(400).json({ status: false, error: "Nomor tujuan tidak terdaftar di WhatsApp!" });
+        }
+
+        await sock.sendMessage(result.jid, { text: message });
         if (db) await db.query('UPDATE gateway_devices SET msg_sent = msg_sent + 1 WHERE id = ?', [sessionId]);
         res.json({ status: true, message: 'Message sent successfully!' });
     } catch (error) {
