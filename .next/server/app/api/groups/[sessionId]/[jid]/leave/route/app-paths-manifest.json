@@ -1,3 +1,0 @@
-{
-  "/api/groups/[sessionId]/[jid]/leave/route": "app/api/groups/[sessionId]/[jid]/leave/route.js"
-}

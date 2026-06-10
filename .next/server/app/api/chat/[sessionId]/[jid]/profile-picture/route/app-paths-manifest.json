@@ -1,3 +1,0 @@
-{
-  "/api/chat/[sessionId]/[jid]/profile-picture/route": "app/api/chat/[sessionId]/[jid]/profile-picture/route.js"
-}

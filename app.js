@@ -1,2 +1,2 @@
-// File app.js ini khusus untuk memancing cPanel menjalankan npm start
-require('child_process').execSync('npm run start', { stdio: 'inherit' });
+// File app.js ini dipanggil oleh cPanel Passenger untuk menjalankan server
+require('./server.js');

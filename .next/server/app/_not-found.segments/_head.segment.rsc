@@ -1,6 +1,0 @@
-1:"$Sreact.fragment"
-2:I[897367,["/_next/static/chunks/d96012bcfc98706a.js","/_next/static/chunks/963c71eec1d89c3f.js"],"ViewportBoundary"]
-3:I[897367,["/_next/static/chunks/d96012bcfc98706a.js","/_next/static/chunks/963c71eec1d89c3f.js"],"MetadataBoundary"]
-4:"$Sreact.suspense"
-5:I[27201,["/_next/static/chunks/d96012bcfc98706a.js","/_next/static/chunks/963c71eec1d89c3f.js"],"IconMark"]
-0:{"buildId":"yFbU4tR-NbRaueLgcMd8u","rsc":["$","$1","h",{"children":[["$","meta",null,{"name":"robots","content":"noindex"}],["$","$L2",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]}],["$","div",null,{"hidden":true,"children":["$","$L3",null,{"children":["$","$4",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"WA-AB | Premium WhatsApp Management"}],["$","meta","1",{"name":"description","content":"Next-generation WhatsApp Gateway & Management Dashboard"}],["$","meta","2",{"name":"robots","content":"noindex, nofollow"}],["$","link","3",{"rel":"icon","href":"/icon?6b55c4870d2fc11b","type":"image/png","sizes":"32x32"}],["$","$L5","4",{}]]}]}]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"loading":null,"isPartial":false}

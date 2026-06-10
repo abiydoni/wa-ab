@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gateway Dashboard Premium</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        
+        .modal-bg { display: none; background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); animation: fadeIn 0.2s ease-out; }
+        .modal-content { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(20px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+        
+        .loader { border-top-color: #10b981; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .gradient-text { background: linear-gradient(90deg, #10b981, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .tab-content { display: none; animation: fadeIn 0.3s; }
+        .tab-content.active { display: block; }
+        .tab-btn.active { background-color: #10b981; color: white; border-color: #10b981; }
+        
+        .styled-table th { background-color: #f1f5f9; color: #475569; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; padding: 0.75rem 1rem; border-bottom: 2px solid #e2e8f0; text-align: left; }
+        .styled-table td { padding: 0.75rem 1rem; border-bottom: 1px solid #e2e8f0; font-size: 0.875rem; }
+        .styled-table tr:hover td { background-color: #f8fafc; }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+<!-- Top Navigation -->
+<nav class="bg-white/80 backdrop-blur-md shadow-sm border-b border-slate-200 sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16 items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-emerald-500 text-white p-2 rounded-xl shadow-lg shadow-emerald-500/30 flex items-center justify-center">
+                    <iconify-icon icon="logos:whatsapp-icon" class="text-2xl"></iconify-icon>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight">Central <span class="gradient-text">Gateway</span></h1>
+            </div>
+            <button onclick="logout()" class="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-rose-500 transition-colors bg-slate-50 hover:bg-rose-50 px-4 py-2 rounded-full border border-slate-200 hover:border-rose-200">
+                <iconify-icon icon="mdi:logout" class="text-lg"></iconify-icon> Logout
+            </button>
+        </div>
+    </div>
+</nav>
+
+<main class="flex-grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Uptime -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md transition-all group relative overflow-hidden">
+            <div class="absolute -right-4 -top-4 text-emerald-50 opacity-50 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:server" class="text-8xl"></iconify-icon></div>
+            <div class="relative z-10">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-2"><iconify-icon icon="mdi:clock-outline" class="text-emerald-500 text-lg"></iconify-icon> Server Uptime</h3>
+                <div class="text-2xl font-black text-slate-800" id="stat-uptime">0 <span class="text-sm font-normal text-slate-500">mnt</span></div>
+            </div>
+        </div>
+        <!-- Memory -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md transition-all group relative overflow-hidden">
+            <div class="absolute -right-4 -top-4 text-blue-50 opacity-50 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:memory" class="text-8xl"></iconify-icon></div>
+            <div class="relative z-10">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-2"><iconify-icon icon="mdi:chip" class="text-blue-500 text-lg"></iconify-icon> Memory Usage</h3>
+                <div class="text-2xl font-black text-slate-800" id="stat-memory">0 <span class="text-sm font-normal text-slate-500">MB</span></div>
+            </div>
+        </div>
+        <!-- Sent -->
+        <div class="bg-gradient-to-br from-emerald-400 to-teal-600 rounded-2xl p-6 shadow-lg shadow-emerald-500/20 text-white relative overflow-hidden group">
+            <div class="absolute -right-4 -top-4 text-white opacity-10 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:message-arrow-right" class="text-8xl"></iconify-icon></div>
+            <div class="relative z-10">
+                <h3 class="text-xs font-bold text-emerald-100 uppercase tracking-wider mb-1 flex items-center gap-2"><iconify-icon icon="mdi:send-check" class="text-lg"></iconify-icon> Pesan Terkirim</h3>
+                <div class="text-3xl font-black" id="stat-sent">0</div>
+            </div>
+        </div>
+        <!-- Received -->
+        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 shadow-lg shadow-indigo-500/20 text-white relative overflow-hidden group">
+            <div class="absolute -right-4 -top-4 text-white opacity-10 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:message-arrow-left" class="text-8xl"></iconify-icon></div>
+            <div class="relative z-10">
+                <h3 class="text-xs font-bold text-indigo-100 uppercase tracking-wider mb-1 flex items-center gap-2"><iconify-icon icon="mdi:message-badge" class="text-lg"></iconify-icon> Pesan Diterima</h3>
+                <div class="text-3xl font-black" id="stat-received">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registration Bar -->
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-8 flex flex-col sm:flex-row gap-3 items-center relative overflow-hidden">
+        <div class="absolute w-2 bg-emerald-500 h-full left-0 top-0"></div>
+        <div class="flex-grow flex items-center bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200 transition-all w-full ml-3">
+            <iconify-icon icon="mdi:identifier" class="text-slate-400 mr-2 text-xl"></iconify-icon>
+            <input type="text" id="newSessionId" placeholder="ID Device (Tanpa Spasi, misal: CS-1)" class="bg-transparent border-none outline-none w-full text-sm font-medium placeholder-slate-400">
+        </div>
+        <div class="flex-grow flex items-center bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200 transition-all w-full">
+            <iconify-icon icon="mdi:cellphone" class="text-slate-400 mr-2 text-xl"></iconify-icon>
+            <input type="text" id="newSessionName" placeholder="Nama Perangkat (misal: WhatsApp CS)" class="bg-transparent border-none outline-none w-full text-sm font-medium placeholder-slate-400">
+        </div>
+        <button onclick="addDevice()" class="whitespace-nowrap bg-slate-900 hover:bg-slate-800 text-white px-6 py-3.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-md hover:shadow-lg w-full sm:w-auto justify-center active:scale-95">
+            <iconify-icon icon="mdi:plus-circle" class="text-lg"></iconify-icon> Daftarkan Klien
+        </button>
+    </div>
+
+    <!-- Device List -->
+    <div class="grid grid-cols-1 gap-6" id="deviceList">
+        <div class="text-center py-12 text-slate-400 animate-pulse bg-white rounded-2xl border border-slate-200 border-dashed">
+            <iconify-icon icon="mdi:loading" class="animate-spin text-5xl mb-3 text-slate-300 mx-auto block"></iconify-icon>
+            <p class="font-medium">Memuat data perangkat...</p>
+        </div>
+    </div>
+
+</main>
+
+<!-- Premium QR Modal -->
+<div id="qrModal" class="modal-bg fixed inset-0 z-[100] items-center justify-center p-4">
+    <div class="modal-content bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full relative text-center border border-slate-100">
+        <button onclick="closeModal('qrModal')" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-rose-100 hover:text-rose-600 text-slate-500 rounded-full transition-colors">
+            <iconify-icon icon="mdi:close" class="text-lg"></iconify-icon>
+        </button>
+        
+        <div class="bg-slate-50 p-6 rounded-2xl border border-slate-100 min-h-[250px] flex items-center justify-center mb-6 shadow-inner mx-auto w-[250px] relative">
+            <div id="qr-loader" class="loader rounded-full border-4 border-slate-200 w-12 h-12"></div>
+            <img id="qr-image" src="" class="hidden w-full h-full object-contain rounded-xl" alt="QR Code" />
+        </div>
+        
+        <h2 id="modalTitle" class="text-xl font-bold text-slate-800 mb-2">Scan QR Code</h2>
+        <p id="modalStatus" class="text-sm text-slate-500 font-medium bg-slate-100 py-2 px-4 rounded-full inline-block">Memproses sesi koneksi...</p>
+    </div>
+</div>
+
+<!-- Device Details Modal -->
+<div id="detailModal" class="modal-bg fixed inset-0 z-[100] items-center justify-center p-4">
+    <div class="modal-content bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col border border-slate-100 overflow-hidden relative">
+        <button onclick="closeModal('detailModal')" class="absolute top-5 right-5 w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-rose-100 hover:text-rose-600 text-slate-500 rounded-full transition-colors z-10">
+            <iconify-icon icon="mdi:close" class="text-lg"></iconify-icon>
+        </button>
+        
+        <div class="p-6 md:p-8 pb-4 border-b border-slate-100">
+            <h2 id="detailTitle" class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <iconify-icon icon="mdi:cellphone-link" class="text-emerald-500"></iconify-icon> Detail Device
+            </h2>
+        </div>
+        
+        <!-- Tabs Nav -->
+        <div class="px-6 md:px-8 pt-4 bg-slate-50/50">
+            <div class="flex flex-wrap gap-2 pb-4">
+                <button class="tab-btn active px-4 py-2 rounded-full text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-2" onclick="switchTab('testTab')">
+                    <iconify-icon icon="mdi:rocket-launch"></iconify-icon> Uji Pesan
+                </button>
+                <button class="tab-btn px-4 py-2 rounded-full text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-2" onclick="switchTab('groupsTab')">
+                    <iconify-icon icon="mdi:account-group"></iconify-icon> Daftar Grup
+                </button>
+                <button class="tab-btn px-4 py-2 rounded-full text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-2" onclick="switchTab('contactsTab')">
+                    <iconify-icon icon="mdi:contacts"></iconify-icon> Daftar Kontak
+                </button>
+                <button class="tab-btn px-4 py-2 rounded-full text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-2" onclick="switchTab('apiTab')">
+                    <iconify-icon icon="mdi:code-json"></iconify-icon> Dokumen API
+                </button>
+            </div>
+        </div>
+
+        <div class="flex-grow overflow-y-auto p-6 md:p-8 bg-white">
+            
+            <!-- Tab 1: Test Message -->
+            <div id="testTab" class="tab-content active">
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="bg-blue-100 text-blue-600 p-2 rounded-lg"><iconify-icon icon="mdi:message-fast" class="text-xl"></iconify-icon></div>
+                        <div>
+                            <h3 class="font-bold text-slate-800">Kirim Pesan Simulasi</h3>
+                            <p class="text-xs text-slate-500">Coba kirim pesan ke nomor personal atau ID grup langsung dari sini.</p>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" id="testSessionId">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Tujuan</label>
+                            <input type="text" id="testNumber" placeholder="0812... ATAU 12345-67@g.us" class="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Pesan</label>
+                            <textarea id="testMessage" rows="3" placeholder="Halo, ini pesan percobaan dari Dashboard..." class="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all"></textarea>
+                        </div>
+                        <button class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl transition-colors shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2" onclick="sendTestMessage()" id="btnSendTest">
+                            Kirim Pesan <iconify-icon icon="mdi:send"></iconify-icon>
+                        </button>
+                    </div>
+                    <p id="testResult" class="mt-4 text-sm text-center font-medium empty:hidden"></p>
+                </div>
+            </div>
+
+            <!-- Tab 2: Groups -->
+            <div id="groupsTab" class="tab-content">
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-1 overflow-hidden">
+                    <div class="bg-white rounded-xl overflow-x-auto max-h-[400px]" id="groupsList">
+                        <div class="p-8 text-center text-slate-400">Memuat data grup...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: Contacts -->
+            <div id="contactsTab" class="tab-content">
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-1 overflow-hidden">
+                    <div class="bg-white rounded-xl overflow-x-auto max-h-[400px]" id="contactsList">
+                        <div class="p-8 text-center text-slate-400">Memuat data kontak...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 4: API Docs -->
+            <div id="apiTab" class="tab-content">
+                <div class="bg-slate-800 rounded-2xl p-1 shadow-xl">
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-slate-700 bg-slate-900/50 rounded-t-xl">
+                        <div class="flex items-center gap-2 text-slate-300 font-mono text-sm">
+                            <iconify-icon icon="mdi:console"></iconify-icon> cURL Example
+                        </div>
+                        <button class="btn-copy bg-slate-700 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1" onclick="copyToClipboard(document.getElementById('curlSnippet').innerText, this)">
+                            <iconify-icon icon="mdi:content-copy"></iconify-icon> Copy
+                        </button>
+                    </div>
+                    <div class="p-5 overflow-x-auto">
+                        <pre id="curlSnippet" class="text-emerald-400 font-mono text-sm leading-relaxed"></pre>
+                    </div>
+                </div>
+                <div class="mt-4 bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700 flex gap-3">
+                    <iconify-icon icon="mdi:information" class="text-xl flex-shrink-0"></iconify-icon>
+                    <p>API Key dan Session ID pada kode di atas sudah secara otomatis disesuaikan dengan kredensial perangkat ini.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = '/api';
+    let qrCheckInterval;
+    let statsInterval;
+
+    function formatUptime(seconds) {
+        if (!seconds) return '0 <span class="text-sm font-normal text-slate-500">mnt</span>';
+        const d = Math.floor(seconds / (3600*24));
+        const h = Math.floor(seconds % (3600*24) / 3600);
+        const m = Math.floor(seconds % 3600 / 60);
+        if(d > 0) return `${d} <span class="text-sm font-normal text-slate-500">hari</span> ${h} <span class="text-sm font-normal text-slate-500">jam</span>`;
+        if(h > 0) return `${h} <span class="text-sm font-normal text-slate-500">jam</span> ${m} <span class="text-sm font-normal text-slate-500">mnt</span>`;
+        return `${m} <span class="text-sm font-normal text-slate-500">mnt</span>`;
+    }
+
+    function formatDigitalTimer(seconds) {
+        const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+        const m = Math.floor(seconds % 3600 / 60).toString().padStart(2, '0');
+        const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+        return `${h}:${m}:${s}`;
+    }
+
+    setInterval(() => {
+        document.querySelectorAll('.live-timer').forEach(el => {
+            let s = parseInt(el.getAttribute('data-uptime')) || 0;
+            s++;
+            el.setAttribute('data-uptime', s);
+            const textEl = el.querySelector('.time-text');
+            if(textEl) textEl.innerText = formatDigitalTimer(s);
+        });
+    }, 1000);
+
+    async function loadStats() {
+        try {
+            const res = await fetch(`${API_BASE}/stats`);
+            if(!res.ok) return;
+            const data = await res.json();
+            
+            document.getElementById('stat-uptime').innerHTML = formatUptime(data.uptime);
+            document.getElementById('stat-memory').innerHTML = `${Math.round(data.memory / 1024 / 1024)} <span class="text-sm font-normal text-slate-500">MB</span>`;
+            document.getElementById('stat-sent').innerText = data.totalSent;
+            document.getElementById('stat-received').innerText = data.totalReceived;
+        } catch(e) {}
+    }
+
+    async function loadSessions() {
+        try {
+            const res = await fetch(`${API_BASE}/devices`);
+            if (res.status === 401) { window.location.href = '/login.html'; return; }
+            
+            const data = await res.json();
+            const list = document.getElementById('deviceList');
+            list.innerHTML = '';
+
+            if(data.devices.length === 0) {
+                list.innerHTML = `
+                <div class="text-center py-16 bg-white rounded-2xl border border-slate-200 border-dashed">
+                    <div class="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><iconify-icon icon="mdi:cellphone-off" class="text-3xl text-slate-400"></iconify-icon></div>
+                    <h3 class="text-lg font-bold text-slate-700">Belum ada Klien</h3>
+                    <p class="text-slate-500 text-sm mt-1">Daftarkan perangkat pertama Anda di atas.</p>
+                </div>`;
+                return;
+            }
+
+            data.devices.forEach(session => {
+                let badgeClass = 'bg-rose-100 text-rose-700 border-rose-200';
+                let statusIcon = 'mdi:close-circle';
+                let statusText = 'Disconnected';
+                let timerHtml = '';
+                
+                if (session.status === 'connected') {
+                    badgeClass = 'bg-emerald-100 text-emerald-700 border-emerald-200';
+                    statusIcon = 'mdi:check-circle';
+                    statusText = 'Connected (' + (session.user?.name || session.user?.id.split(':')[0]) + ')';
+                    timerHtml = `<span class="live-timer bg-emerald-600 text-white px-2 py-0.5 rounded text-xs font-mono shadow-sm inline-flex items-center gap-1" data-uptime="${session.uptimeSeconds}"><iconify-icon icon="mdi:circle-medium" class="animate-pulse"></iconify-icon> Online: <span class="time-text">${formatDigitalTimer(session.uptimeSeconds)}</span></span>`;
+                } else if (session.status === 'starting_or_waiting_qr') {
+                    badgeClass = 'bg-amber-100 text-amber-700 border-amber-200';
+                    statusIcon = 'mdi:qrcode-scan';
+                    statusText = 'Waiting QR / Starting';
+                }
+
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md transition-all relative overflow-hidden';
+                card.innerHTML = `
+                    <div class="absolute w-1.5 h-full left-0 top-0 ${session.status === 'connected' ? 'bg-emerald-500' : 'bg-slate-200'}"></div>
+                    <div class="pl-4">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5 border-b border-slate-100 pb-5">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-1">
+                                    <iconify-icon icon="mdi:cellphone-wireless" class="text-slate-400"></iconify-icon> ${session.name} 
+                                    <span class="text-sm font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded">ID: ${session.id}</span>
+                                </h3>
+                                <div class="flex items-center gap-3">
+                                    <span class="px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1 ${badgeClass}">
+                                        <iconify-icon icon="${statusIcon}"></iconify-icon> ${statusText}
+                                    </span>
+                                    ${timerHtml}
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 w-full sm:w-auto">
+                                ${session.status === 'connected' ? 
+                                    `<button class="flex-1 sm:flex-none bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white border border-blue-200 hover:border-blue-600 px-4 py-2 rounded-xl text-sm font-bold transition-colors flex justify-center items-center gap-2" onclick="openDetailModal('${session.id}', '${session.name}', '${session.api_key}')"><iconify-icon icon="mdi:tune-vertical"></iconify-icon> Detail & Alat</button>` : 
+                                    `<button class="flex-1 sm:flex-none bg-amber-50 hover:bg-amber-500 text-amber-600 hover:text-white border border-amber-200 hover:border-amber-500 px-4 py-2 rounded-xl text-sm font-bold transition-colors flex justify-center items-center gap-2" onclick="showQR('${session.id}')"><iconify-icon icon="mdi:qrcode"></iconify-icon> Lihat QR</button>`
+                                }
+                                <button class="bg-rose-50 hover:bg-rose-500 text-rose-500 hover:text-white border border-rose-200 hover:border-rose-500 w-10 h-10 rounded-xl flex items-center justify-center transition-colors" onclick="deleteSession('${session.id}')" title="Hapus Device">
+                                    <iconify-icon icon="mdi:delete" class="text-lg"></iconify-icon>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between group">
+                                <div>
+                                    <div class="text-xs font-bold text-slate-400 uppercase mb-1">API Key</div>
+                                    <code class="text-slate-700 font-mono text-xs">${session.api_key}</code>
+                                </div>
+                                <button class="text-slate-400 hover:text-emerald-500 transition-colors p-2" onclick="copyToClipboard('${session.api_key}', this)"><iconify-icon icon="mdi:content-copy" class="text-lg"></iconify-icon></button>
+                            </div>
+                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col justify-center">
+                                <div class="text-xs font-bold text-slate-400 uppercase mb-1">Webhook URL</div>
+                                <div class="flex gap-2">
+                                    <input type="text" id="webhook-${session.id}" value="${session.webhook_url || ''}" placeholder="https://..." class="w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs outline-none focus:border-emerald-500">
+                                    <button class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 rounded text-xs font-medium transition-colors" onclick="saveWebhook('${session.id}')">Save</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex gap-6 text-sm font-medium text-slate-500">
+                            <span class="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded"><iconify-icon icon="mdi:arrow-top-right"></iconify-icon> Terkirim: ${session.msg_sent || 0}</span>
+                            <span class="flex items-center gap-1 text-indigo-600 bg-indigo-50 px-2 py-1 rounded"><iconify-icon icon="mdi:arrow-bottom-left"></iconify-icon> Diterima: ${session.msg_received || 0}</span>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        } catch(e) {}
+    }
+
+    async function addDevice() {
+        const id = document.getElementById('newSessionId').value.trim();
+        const name = document.getElementById('newSessionName').value.trim();
+        if(!id || !name) return alert('ID dan Nama wajib diisi!');
+        
+        await fetch(`${API_BASE}/devices/add`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id, name })
+        });
+        
+        document.getElementById('newSessionId').value = '';
+        document.getElementById('newSessionName').value = '';
+        loadSessions();
+        showQR(id);
+    }
+
+    async function saveWebhook(id) {
+        const url = document.getElementById(`webhook-${id}`).value.trim();
+        const res = await fetch(`${API_BASE}/devices/update`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id, webhook_url: url })
+        });
+        if(res.ok) alert('Webhook berhasil disimpan!');
+    }
+
+    async function deleteSession(id) {
+        if(!confirm(`Yakin ingin menghapus Device/Klien ${id}? Semua data sesi akan hilang.`)) return;
+        await fetch(`${API_BASE}/devices/delete?id=${id}`, { method: 'DELETE' });
+        loadSessions();
+    }
+
+    async function logout() {
+        await fetch(`${API_BASE}/logout`, { method: 'POST' });
+        window.location.href = '/login.html';
+    }
+
+    function showQR(sessionId) {
+        document.getElementById('qrModal').style.display = 'flex';
+        document.getElementById('modalTitle').innerText = 'Scan QR - ' + sessionId;
+        document.getElementById('modalStatus').innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> Memproses sesi koneksi...';
+        document.getElementById('qr-image').classList.add('hidden');
+        document.getElementById('qr-loader').classList.remove('hidden');
+        
+        checkQR(sessionId);
+        qrCheckInterval = setInterval(() => checkQR(sessionId), 3000);
+    }
+
+    async function checkQR(sessionId) {
+        try {
+            const res = await fetch(`${API_BASE}/devices`);
+            const data = await res.json();
+            const session = data.devices.find(d => d.id === sessionId);
+            
+            if (session && session.status === 'connected') {
+                document.getElementById('modalStatus').innerHTML = '<span class="text-emerald-600 font-bold"><iconify-icon icon="mdi:check-circle"></iconify-icon> Berhasil Terhubung!</span>';
+                document.getElementById('qr-image').classList.add('hidden');
+                document.getElementById('qr-loader').classList.add('hidden');
+                clearInterval(qrCheckInterval);
+                setTimeout(() => { closeModal('qrModal'); loadSessions(); }, 2000);
+            } else {
+                const qrRes = await fetch(`${API_BASE}/session/qr?id=${sessionId}`);
+                const qrData = await qrRes.json();
+                if(qrData.qr) {
+                    document.getElementById('modalStatus').innerText = 'Silakan scan QR di bawah ini:';
+                    document.getElementById('qr-image').src = qrData.qr;
+                    document.getElementById('qr-image').classList.remove('hidden');
+                    document.getElementById('qr-loader').classList.add('hidden');
+                }
+            }
+        } catch(e) {}
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+        if(modalId === 'qrModal') clearInterval(qrCheckInterval);
+    }
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.classList.add('text-slate-600'); });
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        event.currentTarget.classList.add('active');
+        event.currentTarget.classList.remove('text-slate-600');
+        document.getElementById(tabId).classList.add('active');
+    }
+
+    async function openDetailModal(id, name, apiKey) {
+        document.getElementById('detailModal').style.display = 'flex';
+        document.getElementById('detailTitle').innerHTML = `<iconify-icon icon="mdi:cellphone-link" class="text-emerald-500"></iconify-icon> Info Device: ${name}`;
+        document.getElementById('testSessionId').value = id;
+        document.getElementById('testResult').innerText = '';
+        
+        const host = window.location.origin;
+        const curlCode = `curl -X POST ${host}/api/send-message \\
+  -H "Content-Type: application/json" \\
+  -H "x-api-key: ${apiKey}" \\
+  -d '{
+    "sessionId": "${id}",
+    "number": "0812xxxxxx",
+    "message": "Pesan otomatis dari API"
+  }'`;
+        document.getElementById('curlSnippet').innerText = curlCode;
+
+        document.getElementById('groupsList').innerHTML = '<div class="p-8 text-center text-slate-400"><iconify-icon icon="mdi:loading" class="animate-spin text-3xl mb-2 block mx-auto"></iconify-icon> Mengambil grup...</div>';
+        document.getElementById('contactsList').innerHTML = '<div class="p-8 text-center text-slate-400"><iconify-icon icon="mdi:loading" class="animate-spin text-3xl mb-2 block mx-auto"></iconify-icon> Membaca memori kontak...</div>';
+
+        try {
+            const res = await fetch(`${API_BASE}/device/details?id=${id}`);
+            const data = await res.json();
+            
+            const gl = document.getElementById('groupsList');
+            if(data.groups.length === 0) {
+                gl.innerHTML = '<div class="p-8 text-center text-slate-400"><iconify-icon icon="mdi:folder-open-outline" class="text-4xl mb-2 block mx-auto opacity-50"></iconify-icon> Tidak ada grup ditemukan.</div>';
+            } else {
+                let tableHtml = `<table class="styled-table w-full"><thead><tr><th width="50">No</th><th>Nama Grup</th><th>ID Grup (Broadcast)</th></tr></thead><tbody>`;
+                data.groups.forEach((g, index) => {
+                    tableHtml += `<tr><td class="text-slate-500">${index + 1}</td><td class="font-semibold text-slate-700">${g.name}</td>
+                                  <td><code class="bg-slate-100 text-slate-600 px-2 py-1 rounded font-mono text-xs border border-slate-200">${g.id}</code> <button class="ml-2 text-xs bg-white border border-slate-200 hover:border-emerald-500 hover:text-emerald-600 px-2 py-1 rounded transition-colors shadow-sm" onclick="copyToClipboard('${g.id}', this)"><iconify-icon icon="mdi:content-copy"></iconify-icon> Copy</button></td></tr>`;
+                });
+                tableHtml += `</tbody></table>`;
+                gl.innerHTML = tableHtml;
+            }
+
+            const cl = document.getElementById('contactsList');
+            if(data.contacts.length === 0) {
+                cl.innerHTML = '<div class="p-8 text-center text-slate-400"><iconify-icon icon="mdi:account-off-outline" class="text-4xl mb-2 block mx-auto opacity-50"></iconify-icon> Kontak belum tersinkronisasi.</div>';
+            } else {
+                let tableHtml = `<table class="styled-table w-full"><thead><tr><th width="50">No</th><th>Nama Kontak</th><th>Nomor (JID)</th></tr></thead><tbody>`;
+                data.contacts.forEach((c, index) => {
+                    const jid = c.jid.split('@')[0];
+                    tableHtml += `<tr><td class="text-slate-500">${index + 1}</td><td class="font-semibold text-slate-700">${c.name}</td>
+                                  <td><code class="bg-slate-100 text-slate-600 px-2 py-1 rounded font-mono text-xs border border-slate-200">${jid}</code> <button class="ml-2 text-xs bg-white border border-slate-200 hover:border-emerald-500 hover:text-emerald-600 px-2 py-1 rounded transition-colors shadow-sm" onclick="copyToClipboard('${jid}', this)"><iconify-icon icon="mdi:content-copy"></iconify-icon> Copy</button></td></tr>`;
+                });
+                tableHtml += `</tbody></table>`;
+                cl.innerHTML = tableHtml;
+            }
+        } catch(e) {
+            document.getElementById('groupsList').innerHTML = '<div class="p-8 text-center text-rose-500">Gagal memuat data.</div>';
+        }
+    }
+
+    async function sendTestMessage() {
+        const id = document.getElementById('testSessionId').value;
+        const number = document.getElementById('testNumber').value.trim();
+        const msg = document.getElementById('testMessage').value.trim();
+        const btn = document.getElementById('btnSendTest');
+        const resText = document.getElementById('testResult');
+
+        if(!number || !msg) return alert('Nomor dan Pesan wajib diisi!');
+
+        btn.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> Mengirim...';
+        btn.disabled = true;
+        resText.innerText = '';
+
+        try {
+            const res = await fetch(`${API_BASE}/device/test-message`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id, number, message: msg })
+            });
+            const data = await res.json();
+            
+            if(data.success) {
+                resText.innerHTML = '<span class="text-emerald-500 bg-emerald-50 px-4 py-2 rounded-lg inline-block border border-emerald-100"><iconify-icon icon="mdi:check-circle"></iconify-icon> Pesan berhasil terkirim!</span>';
+                document.getElementById('testMessage').value = '';
+                loadStats();
+            } else {
+                resText.innerHTML = `<span class="text-rose-500 bg-rose-50 px-4 py-2 rounded-lg inline-block border border-rose-100"><iconify-icon icon="mdi:alert-circle"></iconify-icon> Gagal: ${data.error}</span>`;
+            }
+        } catch(e) {
+            resText.innerHTML = `<span class="text-rose-500 bg-rose-50 px-4 py-2 rounded-lg inline-block border border-rose-100"><iconify-icon icon="mdi:wifi-off"></iconify-icon> Error jaringan.</span>`;
+        }
+
+        btn.innerHTML = 'Kirim Pesan <iconify-icon icon="mdi:send"></iconify-icon>';
+        btn.disabled = false;
+    }
+
+    function copyToClipboard(text, btnElement) {
+        navigator.clipboard.writeText(text).then(() => {
+            const originalHTML = btnElement.innerHTML;
+            btnElement.innerHTML = '<iconify-icon icon="mdi:check"></iconify-icon> Copied';
+            btnElement.classList.add('bg-emerald-500', 'text-white', 'border-emerald-500');
+            btnElement.classList.remove('bg-white', 'text-slate-600');
+            setTimeout(() => {
+                btnElement.innerHTML = originalHTML;
+                btnElement.classList.remove('bg-emerald-500', 'text-white', 'border-emerald-500');
+            }, 1500);
+        }).catch(err => {
+            alert('Gagal menyalin teks.');
+        });
+    }
+
+    loadSessions();
+    loadStats();
+    statsInterval = setInterval(() => { loadStats(); }, 3000);
+
+</script>
+</body>
+</html>

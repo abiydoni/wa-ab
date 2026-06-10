@@ -1,3 +1,0 @@
-{
-  "/api/messages/[sessionId]/[jid]/[messageId]/star/route": "app/api/messages/[sessionId]/[jid]/[messageId]/star/route.js"
-}

@@ -1,3 +1,0 @@
-{
-  "/api/groups/[sessionId]/create/route": "app/api/groups/[sessionId]/create/route.js"
-}
