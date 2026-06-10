@@ -5,6 +5,15 @@ const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
+
+// Catch all errors for Passenger debugging
+process.on('uncaughtException', (err) => {
+    fs.appendFileSync(path.join(__dirname, 'passenger-error.log'), new Date().toISOString() + ' uncaughtException: ' + err.stack + '\n');
+});
+process.on('unhandledRejection', (reason, promise) => {
+    fs.appendFileSync(path.join(__dirname, 'passenger-error.log'), new Date().toISOString() + ' unhandledRejection: ' + reason + '\n');
+});
+
 const session = require('express-session');
 const axios = require('axios');
 
