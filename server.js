@@ -291,7 +291,21 @@ app.get('/api/devices', requireAuth, async (req, res) => {
         if (sock && sock.user) status = 'connected';
         else if (activeSessions.has(device.id) || hasSessionFolder) status = 'starting_or_waiting_qr';
 
-        const uptimeSeconds = (status === 'connected' && sock.connectedAt) ? Math.floor((Date.now() - sock.connectedAt) / 1000) : 0;
+        let uptimeSeconds = 0;
+        if (status === 'connected') {
+            const sessionPath = path.join(sessionsDir, device.id);
+            if (fs.existsSync(sessionPath)) {
+                try {
+                    const stats = fs.statSync(sessionPath);
+                    const linkedAt = stats.birthtimeMs || stats.mtimeMs;
+                    uptimeSeconds = Math.floor((Date.now() - linkedAt) / 1000);
+                } catch(e) {
+                    uptimeSeconds = sock.connectedAt ? Math.floor((Date.now() - sock.connectedAt) / 1000) : 0;
+                }
+            } else {
+                uptimeSeconds = sock.connectedAt ? Math.floor((Date.now() - sock.connectedAt) / 1000) : 0;
+            }
+        }
 
         return { ...device, status, user: sock ? sock.user : null, uptimeSeconds };
     });
