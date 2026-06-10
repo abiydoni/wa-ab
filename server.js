@@ -20,7 +20,7 @@ app.use(session({
     cookie: { secure: false } // Set true if HTTPS
 }));
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3456;
 const sessionsDir = path.join(__dirname, 'sessions');
 
 // Store active socket connections and QR codes
