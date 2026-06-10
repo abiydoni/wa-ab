@@ -163,17 +163,10 @@ async function startSession(sessionId) {
     console.log(`Starting session: ${sessionId}`);
 
     const sock = makeWASocket({
-        version,
-        auth: {
-            creds: state.creds,
-            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
-        },
+        auth: state,
         printQRInTerminal: false,
         browser: ['Appsbee WA Gateway', 'Chrome', '1.0.0'],
-        logger: pino({ level: 'error' }),
-        syncFullHistory: false,
-        generateHighQualityLinkPreviews: true,
-        getMessage: async (key) => { return { conversation: 'hello' } }
+        logger: pino({ level: 'silent' })
     });
 
     sock.ev.on('connection.update', async (update) => {
@@ -468,21 +461,6 @@ app.post('/api/device/test-message', requireAuth, async (req, res) => {
 
     try {
         const jid = formatPhone(number);
-        
-        // Force fetch group metadata to ensure Baileys knows the participants 
-        // for SenderKey encryption distribution before sending
-        if (jid.endsWith('@g.us')) {
-            try {
-                // Use a 3-second timeout so the API never hangs indefinitely
-                await Promise.race([
-                    sock.groupMetadata(jid),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout fetching metadata')), 3000))
-                ]);
-            } catch (err) {
-                console.error(`Gagal mengambil data grup ${jid}:`, err.message);
-            }
-        }
-
         const result = await sock.sendMessage(jid, { text: message });
         if (db) await db.query('UPDATE gateway_devices SET msg_sent = msg_sent + 1 WHERE id = ?', [id]);
         res.json({ success: true, jid: jid, result: result });
@@ -648,18 +626,6 @@ app.post('/api/send-message', async (req, res) => {
 
     try {
         const jid = formatPhone(number);
-        
-        if (jid.endsWith('@g.us')) {
-            try {
-                await Promise.race([
-                    sock.groupMetadata(jid),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout fetching metadata')), 3000))
-                ]);
-            } catch (err) {
-                console.error(`Gagal mengambil data grup ${jid}:`, err.message);
-            }
-        }
-
         const result = await sock.sendMessage(jid, { text: message });
         if (db) await db.query('UPDATE gateway_devices SET msg_sent = msg_sent + 1 WHERE id = ?', [sessionId]);
         res.json({ status: true, message: 'Message sent successfully!', jid: jid, result: result });
