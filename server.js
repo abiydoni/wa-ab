@@ -467,6 +467,7 @@ app.post('/api/devices/stop', requireAuth, async (req, res) => {
     const sock = activeSessions.get(id);
     if (sock) {
         sock.end(undefined);
+        activeSessions.delete(id); // Force immediate state change
     }
     res.json({ success: true });
 });
@@ -477,6 +478,7 @@ app.post('/api/devices/restart', requireAuth, async (req, res) => {
     const sock = activeSessions.get(id);
     if (sock) {
         sock.end(undefined);
+        activeSessions.delete(id); // Force immediate state change
     } else {
         await startSession(id);
     }
