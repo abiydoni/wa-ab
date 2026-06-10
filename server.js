@@ -127,21 +127,24 @@ async function initDatabase() {
 // Utility function to format phone number
 function formatPhone(phone) {
     if (!phone) return '';
-    phone = phone.trim();
-    if (phone.endsWith('@g.us') || phone.endsWith('@s.whatsapp.net')) return phone;
     
-    // If it looks like a group ID without @g.us (e.g. contains hyphen)
-    if (phone.includes('-') && !phone.includes('@')) return phone + '@g.us';
+    // Remove @g.us or @s.whatsapp.net if user inputted them
+    phone = phone.trim().replace('@g.us', '').replace('@s.whatsapp.net', '');
 
     let formatted = phone.replace(/\D/g, '');
     
-    // Modern WhatsApp group IDs start with 120 and are 18 digits long
-    if (formatted.startsWith('120') && formatted.length >= 18) {
-        return formatted + '@g.us';
+    // Format to 62 if starts with 0
+    if (formatted.startsWith('0')) {
+        formatted = '62' + formatted.slice(1);
     }
-
-    if (formatted.startsWith('0')) formatted = '62' + formatted.slice(1);
-    return formatted + '@s.whatsapp.net';
+    
+    // Append @s.whatsapp.net ONLY for personal numbers, do NOT append @g.us
+    if (!formatted.startsWith('120') && !formatted.includes('-')) {
+        return formatted + '@s.whatsapp.net';
+    }
+    
+    // For groups, return bare number or @g.us based on user request (they want it removed)
+    return formatted; // Return bare number without @g.us
 };
 
 async function startSession(sessionId) {
@@ -468,12 +471,12 @@ app.post('/api/device/test-message', requireAuth, async (req, res) => {
         
         // Force fetch group metadata to ensure Baileys knows the participants 
         // for SenderKey encryption distribution before sending
-        if (jid.endsWith('@g.us')) {
+        if (jid.startsWith('120') || jid.includes('-')) {
             try {
-                await sock.groupMetadata(jid);
+                // We append @g.us temporarily just for the metadata fetch call
+                await sock.groupMetadata(jid + '@g.us');
             } catch (err) {
                 console.error(`Gagal mengambil data grup ${jid}:`, err.message);
-                // We don't block here, maybe it still sends
             }
         }
 
@@ -643,9 +646,10 @@ app.post('/api/send-message', async (req, res) => {
     try {
         const jid = formatPhone(number);
         
-        if (jid.endsWith('@g.us')) {
+        if (jid.startsWith('120') || jid.includes('-')) {
             try {
-                await sock.groupMetadata(jid);
+                // We append @g.us temporarily just for the metadata fetch call
+                await sock.groupMetadata(jid + '@g.us');
             } catch (err) {
                 console.error(`Gagal mengambil data grup ${jid}:`, err.message);
             }
