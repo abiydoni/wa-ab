@@ -250,11 +250,22 @@
 
     function formatDigitalTimer(seconds) {
         if (!seconds) seconds = 0;
-        const d = Math.floor(seconds / (3600 * 24));
+        const totalD = Math.floor(seconds / (3600 * 24));
+        const y = Math.floor(totalD / 365);
+        const mo = Math.floor((totalD % 365) / 30);
+        const d = (totalD % 365) % 30;
+        
         const h = Math.floor(seconds % (3600 * 24) / 3600).toString().padStart(2, '0');
         const m = Math.floor(seconds % 3600 / 60).toString().padStart(2, '0');
         const s = Math.floor(seconds % 60).toString().padStart(2, '0');
-        return d > 0 ? `${d}d ${h}:${m}:${s}` : `${h}:${m}:${s}`;
+        
+        let prefix = [];
+        if (y > 0) prefix.push(y + ' tahun');
+        if (mo > 0) prefix.push(mo + ' bulan');
+        if (d > 0) prefix.push(d + ' hari');
+        
+        const prefixStr = prefix.length > 0 ? prefix.join(' ') + ' ' : '';
+        return `${prefixStr}${h}:${m}:${s}`;
     }
 
     setInterval(() => {
@@ -490,10 +501,9 @@
             if(data.groups.length === 0) {
                 gl.innerHTML = '<div class="p-8 text-center text-slate-400"><iconify-icon icon="mdi:folder-open-outline" class="text-4xl mb-2 block mx-auto opacity-50"></iconify-icon> Tidak ada grup ditemukan.</div>';
             } else {
-                let tableHtml = `<table class="styled-table w-full"><thead><tr><th width="50">No</th><th>Nama Grup</th><th>ID Grup (Broadcast)</th></tr></thead><tbody>`;
+                let tableHtml = `<table class="styled-table w-full"><thead><tr><th width="50">No</th><th>Grup</th><th width="50" class="text-center">Aksi</th></tr></thead><tbody>`;
                 data.groups.forEach((g, index) => {
-                    tableHtml += `<tr><td class="text-slate-500">${index + 1}</td><td class="font-semibold text-slate-700">${g.name}</td>
-                                  <td><code class="bg-slate-100 text-slate-600 px-2 py-1 rounded font-mono text-xs border border-slate-200">${g.id}</code> <button class="ml-2 text-xs bg-white border border-slate-200 hover:border-emerald-500 hover:text-emerald-600 px-2 py-1 rounded transition-colors shadow-sm" onclick="copyToClipboard('${g.id}', this)"><iconify-icon icon="mdi:content-copy"></iconify-icon> Copy</button></td></tr>`;
+                    tableHtml += `<tr><td class="text-slate-500">${index + 1}</td><td><div class="font-semibold text-slate-700 mb-1">${g.name}</div><code class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono text-[10px] sm:text-xs border border-slate-200 break-all">${g.id}</code></td><td class="text-center"><button class="text-slate-400 hover:text-emerald-500 p-1 rounded transition-colors" onclick="copyToClipboard('${g.id}', this)" title="Copy ID"><iconify-icon icon="mdi:content-copy" class="text-lg"></iconify-icon></button></td></tr>`;
                 });
                 tableHtml += `</tbody></table>`;
                 gl.innerHTML = tableHtml;
@@ -503,11 +513,10 @@
             if(data.contacts.length === 0) {
                 cl.innerHTML = '<div class="p-8 text-center text-slate-400"><iconify-icon icon="mdi:account-off-outline" class="text-4xl mb-2 block mx-auto opacity-50"></iconify-icon> Kontak belum tersinkronisasi.</div>';
             } else {
-                let tableHtml = `<table class="styled-table w-full"><thead><tr><th width="50">No</th><th>Nama Kontak</th><th>Nomor (JID)</th></tr></thead><tbody>`;
+                let tableHtml = `<table class="styled-table w-full"><thead><tr><th width="50">No</th><th>Kontak</th><th width="50" class="text-center">Aksi</th></tr></thead><tbody>`;
                 data.contacts.forEach((c, index) => {
                     const jid = c.jid.split('@')[0];
-                    tableHtml += `<tr><td class="text-slate-500">${index + 1}</td><td class="font-semibold text-slate-700">${c.name}</td>
-                                  <td><code class="bg-slate-100 text-slate-600 px-2 py-1 rounded font-mono text-xs border border-slate-200">${jid}</code> <button class="ml-2 text-xs bg-white border border-slate-200 hover:border-emerald-500 hover:text-emerald-600 px-2 py-1 rounded transition-colors shadow-sm" onclick="copyToClipboard('${jid}', this)"><iconify-icon icon="mdi:content-copy"></iconify-icon> Copy</button></td></tr>`;
+                    tableHtml += `<tr><td class="text-slate-500">${index + 1}</td><td><div class="font-semibold text-slate-700 mb-1">${c.name}</div><code class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono text-[10px] sm:text-xs border border-slate-200 break-all">${jid}</code></td><td class="text-center"><button class="text-slate-400 hover:text-emerald-500 p-1 rounded transition-colors" onclick="copyToClipboard('${jid}', this)" title="Copy Nomor"><iconify-icon icon="mdi:content-copy" class="text-lg"></iconify-icon></button></td></tr>`;
                 });
                 tableHtml += `</tbody></table>`;
                 cl.innerHTML = tableHtml;
