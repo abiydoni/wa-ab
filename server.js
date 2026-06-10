@@ -465,6 +465,18 @@ app.post('/api/device/test-message', requireAuth, async (req, res) => {
 
     try {
         const jid = formatPhone(number);
+        
+        // Force fetch group metadata to ensure Baileys knows the participants 
+        // for SenderKey encryption distribution before sending
+        if (jid.endsWith('@g.us')) {
+            try {
+                await sock.groupMetadata(jid);
+            } catch (err) {
+                console.error(`Gagal mengambil data grup ${jid}:`, err.message);
+                // We don't block here, maybe it still sends
+            }
+        }
+
         const result = await sock.sendMessage(jid, { text: message });
         if (db) await db.query('UPDATE gateway_devices SET msg_sent = msg_sent + 1 WHERE id = ?', [id]);
         res.json({ success: true, jid: jid, result: result });
@@ -630,6 +642,15 @@ app.post('/api/send-message', async (req, res) => {
 
     try {
         const jid = formatPhone(number);
+        
+        if (jid.endsWith('@g.us')) {
+            try {
+                await sock.groupMetadata(jid);
+            } catch (err) {
+                console.error(`Gagal mengambil data grup ${jid}:`, err.message);
+            }
+        }
+
         const result = await sock.sendMessage(jid, { text: message });
         if (db) await db.query('UPDATE gateway_devices SET msg_sent = msg_sent + 1 WHERE id = ?', [sessionId]);
         res.json({ status: true, message: 'Message sent successfully!', jid: jid, result: result });
