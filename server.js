@@ -171,10 +171,7 @@ async function startSession(sessionId) {
         printQRInTerminal: false,
         browser: ['Appsbee WA Gateway', 'Chrome', '1.0.0'],
         logger: pino({ level: 'error' }),
-        syncFullHistory: true,
-        getMessage: async (key) => {
-            return { conversation: 'hello' }
-        }
+        syncFullHistory: false
     });
 
     sock.ev.on('connection.update', async (update) => {
