@@ -14,6 +14,9 @@ process.on('unhandledRejection', (reason, promise) => {
     fs.appendFileSync(path.join(__dirname, 'passenger-error.log'), new Date().toISOString() + ' unhandledRejection: ' + reason + '\n');
 });
 
+// Set timezone to Asia/Jakarta (WIB)
+process.env.TZ = 'Asia/Jakarta';
+
 const session = require('express-session');
 const axios = require('axios');
 const bcrypt = require('bcryptjs');
@@ -61,7 +64,8 @@ async function initDatabase() {
             database: 'appsbeem_wa_ab',
             waitForConnections: true,
             connectionLimit: 10,
-            queueLimit: 0
+            queueLimit: 0,
+            timezone: '+07:00' // Ensure DB queries use WIB timezone
         });
 
         console.log("✅ Connected to MySQL Database");
