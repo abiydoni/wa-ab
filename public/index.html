@@ -802,9 +802,12 @@
                         .bg-emerald-600 { background-color: ${darkHex} !important; }
                         .bg-emerald-100 { background-color: rgba(${rAvg}, ${gAvg}, ${bAvg}, 0.15) !important; }
                         .text-emerald-700 { color: ${darkHex} !important; }
-                        .shadow-emerald-500\\/30 { box-shadow: 0 4px 14px 0 rgba(${rAvg},${gAvg},${bAvg},0.3) !important; }
+                        .shadow-emerald-500\\/30 { box-shadow: 0 10px 15px -3px rgba(${rAvg},${gAvg},${bAvg},0.3) !important; }
+                        .shadow-emerald-500\\/20 { box-shadow: 0 10px 15px -3px rgba(${rAvg},${gAvg},${bAvg},0.2) !important; }
                         .focus-within\\:border-emerald-500:focus-within { border-color: ${hex} !important; }
                         .focus-within\\:ring-emerald-200:focus-within { box-shadow: 0 0 0 2px rgba(${rAvg},${gAvg},${bAvg},0.2) !important; }
+                        .focus\\:border-emerald-500:focus { border-color: ${hex} !important; }
+                        .focus\\:ring-emerald-200:focus { box-shadow: 0 0 0 2px rgba(${rAvg},${gAvg},${bAvg},0.2) !important; }
                         .hover\\:bg-emerald-600:hover { background-color: ${darkHex} !important; }
                         .hover\\:text-emerald-500:hover { color: ${hex} !important; }
                         .hover\\:border-emerald-500:hover { border-color: ${hex} !important; }
@@ -814,6 +817,13 @@
                         .loader { border-top-color: ${hex} !important; }
                         .tab-btn.active { background-color: ${hex} !important; border-color: ${hex} !important; }
                         .theme-logo-bg { background-color: ${hex} !important; }
+                        .text-emerald-400 { color: ${hex} !important; }
+                        .text-emerald-100 { color: rgba(255,255,255,0.8) !important; }
+                        .text-emerald-50 { color: rgba(${rAvg},${gAvg},${bAvg},0.1) !important; }
+                        .border-emerald-200 { border-color: rgba(${rAvg},${gAvg},${bAvg},0.2) !important; }
+                        .bg-emerald-50 { background-color: rgba(${rAvg},${gAvg},${bAvg},0.05) !important; }
+                        .border-emerald-100 { border-color: rgba(${rAvg},${gAvg},${bAvg},0.1) !important; }
+                        .hover\\:bg-emerald-500:hover { background-color: ${hex} !important; }
                     `;
                     document.head.appendChild(style);
                     
