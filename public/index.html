@@ -65,6 +65,9 @@
                 <button id="btnUserManagement" onclick="openUserModal()" class="w-10 h-10 flex items-center justify-center rounded-full text-slate-500 bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 transition-colors hidden" title="Manajemen User">
                     <iconify-icon icon="mdi:account-cog" class="text-xl"></iconify-icon>
                 </button>
+                <button onclick="openChangePasswordModal()" class="w-10 h-10 flex items-center justify-center rounded-full text-blue-500 bg-blue-50 hover:bg-blue-100 border border-blue-100 hover:border-blue-200 transition-colors" title="Ganti Password">
+                    <iconify-icon icon="mdi:key-variant" class="text-xl"></iconify-icon>
+                </button>
                 <button onclick="logout()" class="w-10 h-10 flex items-center justify-center rounded-full text-rose-500 bg-rose-50 hover:bg-rose-100 border border-rose-100 hover:border-rose-200 transition-colors" title="Logout">
                     <iconify-icon icon="mdi:logout" class="text-xl"></iconify-icon>
                 </button>
@@ -81,7 +84,7 @@
         <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200 hover:shadow-md transition-all group relative overflow-hidden">
             <div class="absolute -right-4 -top-4 text-emerald-50 opacity-50 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:server" class="text-6xl sm:text-8xl"></iconify-icon></div>
             <div class="relative z-10">
-                <h3 class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:clock-outline" class="text-emerald-500 text-base sm:text-lg"></iconify-icon> Server Uptime</h3>
+                <h3 id="title-card-1" class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:clock-outline" class="text-emerald-500 text-base sm:text-lg"></iconify-icon> Server Uptime</h3>
                 <div class="text-lg sm:text-2xl font-black text-slate-800 font-mono tracking-tight live-timer" id="stat-uptime" data-uptime="0"><span class="time-text">00:00:00</span></div>
             </div>
         </div>
@@ -89,12 +92,12 @@
         <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200 hover:shadow-md transition-all group relative overflow-hidden flex flex-col justify-between">
             <div class="absolute -right-4 -top-4 text-blue-50 opacity-50 group-hover:scale-110 transition-transform duration-500 z-0"><iconify-icon icon="mdi:memory" class="text-6xl sm:text-8xl"></iconify-icon></div>
             <div class="relative z-10 mb-6">
-                <h3 class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:chip" class="text-blue-500 text-base sm:text-lg"></iconify-icon> Memory Usage</h3>
+                <h3 id="title-card-2" class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:chip" class="text-blue-500 text-base sm:text-lg"></iconify-icon> Memory Usage</h3>
                 <div class="text-xl sm:text-2xl font-black text-slate-800" id="stat-memory">0 <span class="text-xs sm:text-sm font-normal text-slate-500">MB</span></div>
             </div>
             <!-- Dynamic Graph -->
             <div class="absolute bottom-0 left-0 w-full h-12 sm:h-16 z-0 opacity-80" style="margin-bottom: -1px;">
-                <svg viewBox="0 0 100 100" class="w-full h-full" preserveAspectRatio="none">
+                <svg id="memory-graph-svg" viewBox="0 0 100 100" class="w-full h-full" preserveAspectRatio="none">
                     <path id="memory-graph-fill" d="M0,100 L100,100 Z" fill="currentColor" class="text-blue-100 opacity-60 transition-all duration-1000 ease-linear" />
                     <path id="memory-graph-path" d="M0,100 L100,100" fill="none" stroke="currentColor" stroke-width="3" class="text-blue-500 transition-all duration-1000 ease-linear" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
@@ -306,6 +309,35 @@
 </div>
 </div>
 
+<!-- Change Password Modal -->
+<div id="changePasswordModal" class="modal-bg fixed inset-0 z-[100] items-center justify-center p-4">
+    <div class="modal-content bg-white rounded-3xl shadow-2xl w-full max-w-sm flex flex-col border border-slate-100 overflow-hidden relative">
+        <button onclick="closeModal('changePasswordModal')" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors">
+            <iconify-icon icon="mdi:close" class="text-xl"></iconify-icon>
+        </button>
+        <div class="p-6 border-b border-slate-100 bg-slate-50/50">
+            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <iconify-icon icon="mdi:key-variant" class="text-blue-500"></iconify-icon> Ganti Password
+            </h2>
+        </div>
+        <div class="p-6">
+            <form id="changePasswordForm" onsubmit="changeMyPassword(event)" class="flex flex-col gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Password Lama</label>
+                    <input type="password" id="currentPassword" required class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Password Baru</label>
+                    <input type="password" id="newMyPassword" required class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm">
+                </div>
+                <button type="submit" id="btnChangePassword" class="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2">
+                    Simpan Password <iconify-icon icon="mdi:content-save"></iconify-icon>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
     const API_BASE = '/api';
     let qrCheckInterval;
@@ -402,6 +434,17 @@
                 document.getElementById('btnUserManagement').classList.remove('hidden');
             } else {
                 document.getElementById('btnUserManagement').classList.add('hidden');
+                
+                document.getElementById('title-card-1').innerHTML = '<iconify-icon icon="mdi:cellphone-link" class="text-emerald-500 text-base sm:text-lg"></iconify-icon> Total Klien';
+                const uptimeEl = document.getElementById('stat-uptime');
+                uptimeEl.classList.remove('live-timer');
+                uptimeEl.innerHTML = data.totalDevices;
+                
+                document.getElementById('title-card-2').innerHTML = '<iconify-icon icon="mdi:check-network" class="text-blue-500 text-base sm:text-lg"></iconify-icon> Klien Aktif';
+                document.getElementById('stat-memory').innerHTML = data.connectedDevices;
+                
+                const graph = document.getElementById('memory-graph-svg');
+                if (graph) graph.style.display = 'none';
             }
         } catch(e) {}
     }
@@ -614,6 +657,41 @@
     function closeModal(modalId) {
         document.getElementById(modalId).style.display = 'none';
         if(modalId === 'qrModal') clearInterval(qrCheckInterval);
+    }
+
+    function openChangePasswordModal() {
+        document.getElementById('changePasswordForm').reset();
+        document.getElementById('changePasswordModal').style.display = 'flex';
+    }
+
+    async function changeMyPassword(e) {
+        e.preventDefault();
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword = document.getElementById('newMyPassword').value;
+        const btn = document.getElementById('btnChangePassword');
+        
+        btn.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> Menyimpan...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_BASE}/user/password`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ currentPassword, newPassword })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert('Password berhasil diubah!');
+                closeModal('changePasswordModal');
+            } else {
+                alert('Gagal: ' + data.error);
+            }
+        } catch (err) {
+            alert('Error: ' + err.message);
+        } finally {
+            btn.innerHTML = 'Simpan Password <iconify-icon icon="mdi:content-save"></iconify-icon>';
+            btn.disabled = false;
+        }
     }
 
     function switchTab(tabId) {

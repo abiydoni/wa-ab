@@ -438,6 +438,34 @@ app.delete('/api/users/:id', requireAdmin, async (req, res) => {
     }
 });
 
+app.put('/api/user/password', requireAuth, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) return res.status(400).json({ success: false, error: "Semua field harus diisi" });
+        
+        const [rows] = await db.query('SELECT password FROM admin_users WHERE id = ?', [req.session.userId]);
+        if (rows.length === 0) return res.status(404).json({ success: false, error: "User tidak ditemukan" });
+
+        const user = rows[0];
+        let isValid = false;
+        
+        if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
+            isValid = await bcrypt.compare(currentPassword, user.password);
+        } else {
+            isValid = (user.password === currentPassword);
+        }
+
+        if (!isValid) return res.status(401).json({ success: false, error: "Password lama salah" });
+
+        const hashedNew = await bcrypt.hash(newPassword, 10);
+        await db.query('UPDATE admin_users SET password = ? WHERE id = ?', [hashedNew, req.session.userId]);
+        
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 app.post('/api/logout', (req, res) => {
     req.session.destroy();
     res.json({ success: true });
@@ -496,21 +524,34 @@ app.get('/api/devices', requireAuth, async (req, res) => {
 app.get('/api/stats', requireAuth, async (req, res) => {
     if (!db) return res.status(500).json({ error: "DB not ready" });
     
-    let totalSent = 0, totalReceived = 0;
+    let totalSent = 0, totalReceived = 0, totalDevices = 0, connectedDevices = 0;
+    
     if (req.session.role === 'admin') {
-        const [rows] = await db.query('SELECT SUM(msg_sent) as total_sent, SUM(msg_received) as total_received FROM gateway_devices');
+        const [rows] = await db.query('SELECT SUM(msg_sent) as total_sent, SUM(msg_received) as total_received, COUNT(*) as total_dev FROM gateway_devices');
         totalSent = rows[0].total_sent || 0;
         totalReceived = rows[0].total_received || 0;
+        totalDevices = rows[0].total_dev || 0;
+        
+        // Count all connected sessions globally
+        connectedDevices = Array.from(activeSessions.values()).filter(sock => sock && sock.user).length;
     } else {
-        const [rows] = await db.query('SELECT SUM(msg_sent) as total_sent, SUM(msg_received) as total_received FROM gateway_devices WHERE user_id = ?', [req.session.userId]);
-        totalSent = rows[0].total_sent || 0;
-        totalReceived = rows[0].total_received || 0;
+        const [rows] = await db.query('SELECT id, msg_sent, msg_received FROM gateway_devices WHERE user_id = ?', [req.session.userId]);
+        
+        for (const row of rows) {
+            totalSent += row.msg_sent || 0;
+            totalReceived += row.msg_received || 0;
+            totalDevices++;
+            
+            const sock = activeSessions.get(row.id);
+            if (sock && sock.user) connectedDevices++;
+        }
     }
     
     res.json({
         uptime: process.uptime(),
         memory: process.memoryUsage().rss,
-        totalDevices: activeSessions.size,
+        totalDevices,
+        connectedDevices,
         totalSent,
         totalReceived,
         role: req.session.role
