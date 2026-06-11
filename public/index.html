@@ -86,11 +86,18 @@
             </div>
         </div>
         <!-- Memory -->
-        <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200 hover:shadow-md transition-all group relative overflow-hidden">
-            <div class="absolute -right-4 -top-4 text-blue-50 opacity-50 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:memory" class="text-6xl sm:text-8xl"></iconify-icon></div>
-            <div class="relative z-10">
+        <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200 hover:shadow-md transition-all group relative overflow-hidden flex flex-col justify-between">
+            <div class="absolute -right-4 -top-4 text-blue-50 opacity-50 group-hover:scale-110 transition-transform duration-500 z-0"><iconify-icon icon="mdi:memory" class="text-6xl sm:text-8xl"></iconify-icon></div>
+            <div class="relative z-10 mb-6">
                 <h3 class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:chip" class="text-blue-500 text-base sm:text-lg"></iconify-icon> Memory Usage</h3>
                 <div class="text-xl sm:text-2xl font-black text-slate-800" id="stat-memory">0 <span class="text-xs sm:text-sm font-normal text-slate-500">MB</span></div>
+            </div>
+            <!-- Dynamic Graph -->
+            <div class="absolute bottom-0 left-0 w-full h-12 sm:h-16 z-0 opacity-80" style="margin-bottom: -1px;">
+                <svg viewBox="0 0 100 100" class="w-full h-full" preserveAspectRatio="none">
+                    <path id="memory-graph-fill" d="M0,100 L100,100 Z" fill="currentColor" class="text-blue-100 opacity-60 transition-all duration-1000 ease-linear" />
+                    <path id="memory-graph-path" d="M0,100 L100,100" fill="none" stroke="currentColor" stroke-width="3" class="text-blue-500 transition-all duration-1000 ease-linear" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
             </div>
         </div>
         <!-- Sent -->
@@ -334,6 +341,46 @@
         });
     }, 1000);
 
+    let memoryHistory = Array(20).fill(0);
+    const maxMemoryPoints = 20;
+
+    function updateMemoryGraph(mem) {
+        if (memoryHistory[0] === 0 && memoryHistory.every(v => v === 0)) {
+            memoryHistory.fill(mem);
+        }
+        memoryHistory.push(mem);
+        if (memoryHistory.length > maxMemoryPoints) memoryHistory.shift();
+
+        const pathEl = document.getElementById('memory-graph-path');
+        const fillEl = document.getElementById('memory-graph-fill');
+        if (!pathEl || !fillEl) return;
+
+        const maxMem = Math.max(...memoryHistory, 100); 
+        const minMem = Math.max(0, Math.min(...memoryHistory) - 20); 
+        const range = maxMem - minMem || 1;
+        const width = 100, height = 100;
+        let pathD = '', fillD = '';
+
+        memoryHistory.forEach((val, i) => {
+            const x = (i / (maxMemoryPoints - 1)) * width;
+            const y = height - ((val - minMem) / range) * height;
+            if (i === 0) {
+                pathD += `M ${x},${y} `;
+                fillD += `M ${x},${height} L ${x},${y} `;
+            } else {
+                const prevX = ((i - 1) / (maxMemoryPoints - 1)) * width;
+                const prevY = height - ((memoryHistory[i-1] - minMem) / range) * height;
+                const cp1x = prevX + (x - prevX) / 2;
+                pathD += `C ${cp1x},${prevY} ${cp1x},${y} ${x},${y} `;
+                fillD += `C ${cp1x},${prevY} ${cp1x},${y} ${x},${y} `;
+            }
+        });
+        fillD += `L ${width},${height} Z`;
+
+        pathEl.setAttribute('d', pathD);
+        fillEl.setAttribute('d', fillD);
+    }
+
     async function loadStats() {
         try {
             const res = await fetch(`${API_BASE}/stats`);
@@ -343,7 +390,11 @@
             const uptimeEl = document.getElementById('stat-uptime');
             uptimeEl.setAttribute('data-uptime', data.uptime || 0);
             uptimeEl.innerHTML = `<span class="time-text">${formatDigitalTimer(data.uptime)}</span>`;
-            document.getElementById('stat-memory').innerHTML = `${Math.round(data.memory / 1024 / 1024)} <span class="text-sm font-normal text-slate-500">MB</span>`;
+            
+            const memMB = Math.round(data.memory / 1024 / 1024);
+            document.getElementById('stat-memory').innerHTML = `${memMB} <span class="text-sm font-normal text-slate-500">MB</span>`;
+            updateMemoryGraph(memMB);
+            
             document.getElementById('stat-sent').innerText = data.totalSent;
             document.getElementById('stat-received').innerText = data.totalReceived;
         } catch(e) {}
