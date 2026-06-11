@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gateway Dashboard Premium</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/logo.png" type="image/png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -45,8 +47,8 @@
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16 items-center">
             <div class="flex items-center gap-3">
-                <div class="bg-emerald-500 text-white p-2 rounded-xl shadow-lg shadow-emerald-500/30 flex items-center justify-center">
-                    <iconify-icon icon="logos:whatsapp-icon" class="text-2xl"></iconify-icon>
+                <div class="theme-logo-bg bg-slate-100 p-1 rounded-xl shadow-lg flex items-center justify-center">
+                    <img src="/logo.png" alt="Logo" class="w-8 h-8 object-contain">
                 </div>
                 <h1 class="text-xl font-bold tracking-tight">Central <span class="gradient-text">Gateway</span></h1>
             </div>
@@ -762,6 +764,72 @@
     // Initialize
     loadSessions();
     statsInterval = setInterval(() => { loadStats(); }, 3000);
+    
+    // Dynamic theme color from logo
+    window.addEventListener('DOMContentLoaded', () => {
+        const img = new Image();
+        img.src = '/logo.png';
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width; canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            try {
+                const data = ctx.getImageData(0, 0, img.width, img.height).data;
+                let r=0,g=0,b=0,c=0;
+                for(let i=0; i<data.length; i+=4) {
+                    if(data[i+3]>128 && !(data[i]>240&&data[i+1]>240&&data[i+2]>240) && !(data[i]<15&&data[i+1]<15&&data[i+2]<15)) {
+                        r+=data[i]; g+=data[i+1]; b+=data[i+2]; c++;
+                    }
+                }
+                if(c>0) {
+                    const rAvg = Math.round(r/c);
+                    const gAvg = Math.round(g/c);
+                    const bAvg = Math.round(b/c);
+                    const hex = '#' + ((1<<24) + (rAvg<<16) + (gAvg<<8) + bAvg).toString(16).slice(1);
+                    
+                    const style = document.getElementById('dynamic-theme') || document.createElement('style');
+                    style.id = 'dynamic-theme';
+                    style.innerHTML = `
+                        .bg-emerald-500 { background-color: ${hex} !important; }
+                        .text-emerald-500 { color: ${hex} !important; }
+                        .border-emerald-500 { border-color: ${hex} !important; }
+                        .text-emerald-600 { color: ${hex} !important; filter: brightness(0.9); }
+                        .bg-emerald-600 { background-color: ${hex} !important; filter: brightness(0.9); }
+                        .bg-emerald-100 { background-color: ${hex} !important; opacity: 0.15; }
+                        .text-emerald-700 { color: ${hex} !important; filter: brightness(0.8); }
+                        .shadow-emerald-500\\/30 { box-shadow: 0 4px 14px 0 rgba(${rAvg},${gAvg},${bAvg},0.3) !important; }
+                        .focus-within\\:border-emerald-500:focus-within { border-color: ${hex} !important; }
+                        .focus-within\\:ring-emerald-200:focus-within { box-shadow: 0 0 0 2px rgba(${rAvg},${gAvg},${bAvg},0.2) !important; }
+                        .hover\\:bg-emerald-600:hover { background-color: ${hex} !important; filter: brightness(0.9); }
+                        .hover\\:text-emerald-500:hover { color: ${hex} !important; }
+                        .hover\\:border-emerald-500:hover { border-color: ${hex} !important; }
+                        .from-emerald-400 { --tw-gradient-from: ${hex} !important; --tw-gradient-from-position:  !important; }
+                        .to-teal-600 { --tw-gradient-to: ${hex} !important; filter: brightness(0.9); --tw-gradient-to-position:  !important; }
+                        .gradient-text { background: linear-gradient(90deg, ${hex}, #3b82f6) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; }
+                        .loader { border-top-color: ${hex} !important; }
+                        .tab-btn.active { background-color: ${hex} !important; border-color: ${hex} !important; }
+                        .theme-logo-bg { background-color: ${hex} !important; }
+                    `;
+                    document.head.appendChild(style);
+                    
+                    let metaTheme = document.querySelector('meta[name="theme-color"]');
+                    if(!metaTheme) {
+                        metaTheme = document.createElement('meta');
+                        metaTheme.name = 'theme-color';
+                        document.head.appendChild(metaTheme);
+                    }
+                    metaTheme.content = hex;
+                }
+            } catch(e) { console.error('Error extracting color:', e); }
+        };
+    });
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
+        });
+    }
 </script>
 </body>
 </html>
