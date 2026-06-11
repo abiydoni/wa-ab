@@ -187,7 +187,7 @@ async function startSession(sessionId) {
         markOnlineOnConnect: true,
         syncFullHistory: false,
         getMessage: async (key) => {
-            return { conversation: 'hello' }
+            return undefined;
         }
     });
 
