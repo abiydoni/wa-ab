@@ -419,19 +419,22 @@
             if(!res.ok) return;
             const data = await res.json();
             
-            const uptimeEl = document.getElementById('stat-uptime');
-            uptimeEl.setAttribute('data-uptime', data.uptime || 0);
-            uptimeEl.innerHTML = `<span class="time-text">${formatDigitalTimer(data.uptime)}</span>`;
-            
-            const memMB = Math.round(data.memory / 1024 / 1024);
-            document.getElementById('stat-memory').innerHTML = `${memMB} <span class="text-sm font-normal text-slate-500">MB</span>`;
-            updateMemoryGraph(memMB);
-            
             document.getElementById('stat-sent').innerText = data.totalSent;
             document.getElementById('stat-received').innerText = data.totalReceived;
             
             if (data.role === 'admin') {
                 document.getElementById('btnUserManagement').classList.remove('hidden');
+                
+                const uptimeEl = document.getElementById('stat-uptime');
+                uptimeEl.setAttribute('data-uptime', data.uptime || 0);
+                if (!uptimeEl.classList.contains('live-timer')) {
+                    uptimeEl.classList.add('live-timer');
+                }
+                uptimeEl.innerHTML = `<span class="time-text">${formatDigitalTimer(data.uptime)}</span>`;
+                
+                const memMB = Math.round(data.memory / 1024 / 1024);
+                document.getElementById('stat-memory').innerHTML = `${memMB} <span class="text-sm font-normal text-slate-500">MB</span>`;
+                updateMemoryGraph(memMB);
             } else {
                 document.getElementById('btnUserManagement').classList.add('hidden');
                 
