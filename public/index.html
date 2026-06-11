@@ -9,6 +9,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        const cachedTheme = localStorage.getItem('theme-css');
+        if (cachedTheme) {
+            const style = document.createElement('style');
+            style.id = 'dynamic-theme';
+            style.innerHTML = cachedTheme;
+            document.head.appendChild(style);
+        }
+    </script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         
@@ -792,9 +801,7 @@
                     const bDark = Math.floor(bAvg * 0.7);
                     const darkHex = '#' + ((1<<24) + (rDark<<16) + (gDark<<8) + bDark).toString(16).slice(1);
                     
-                    const style = document.getElementById('dynamic-theme') || document.createElement('style');
-                    style.id = 'dynamic-theme';
-                    style.innerHTML = `
+                    const cssContent = `
                         .bg-emerald-500 { background-color: ${hex} !important; }
                         .text-emerald-500 { color: ${hex} !important; }
                         .border-emerald-500 { border-color: ${hex} !important; }
@@ -825,7 +832,17 @@
                         .border-emerald-100 { border-color: rgba(${rAvg},${gAvg},${bAvg},0.1) !important; }
                         .hover\\:bg-emerald-500:hover { background-color: ${hex} !important; }
                     `;
-                    document.head.appendChild(style);
+                    
+                    let style = document.getElementById('dynamic-theme');
+                    if (!style) {
+                        style = document.createElement('style');
+                        style.id = 'dynamic-theme';
+                        document.head.appendChild(style);
+                    }
+                    if (style.innerHTML !== cssContent) {
+                        style.innerHTML = cssContent;
+                        localStorage.setItem('theme-css', cssContent);
+                    }
                     
                     let metaTheme = document.querySelector('meta[name="theme-color"]');
                     if(!metaTheme) {
