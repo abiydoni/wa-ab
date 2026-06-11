@@ -600,7 +600,8 @@
                 let tableHtml = `<table class="styled-table w-full"><thead><tr><th width="50">No</th><th>Kontak</th><th width="50" class="text-center">Aksi</th></tr></thead><tbody>`;
                 data.contacts.forEach((c, index) => {
                     const jid = c.jid.split('@')[0];
-                    tableHtml += `<tr><td class="text-slate-500">${index + 1}</td><td><div class="font-semibold text-slate-700 mb-1">${c.name}</div><code class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono text-[10px] sm:text-xs border border-slate-200 break-all">${jid}</code></td><td class="text-center"><button class="text-slate-400 hover:text-emerald-500 p-1 rounded transition-colors" onclick="copyToClipboard('${jid}', this)" title="Copy Nomor"><iconify-icon icon="mdi:content-copy" class="text-lg"></iconify-icon></button></td></tr>`;
+                    const phone = jid.split(':')[0];
+                    tableHtml += `<tr><td class="text-slate-500">${index + 1}</td><td><div class="font-semibold text-slate-700 mb-1">${c.name}</div><code class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono text-[10px] sm:text-xs border border-slate-200 break-all">${phone}</code></td><td class="text-center"><button class="text-slate-400 hover:text-emerald-500 p-1 rounded transition-colors" onclick="copyToClipboard('${phone}', this)" title="Copy Nomor"><iconify-icon icon="mdi:content-copy" class="text-lg"></iconify-icon></button></td></tr>`;
                 });
                 tableHtml += `</tbody></table>`;
                 cl.innerHTML = tableHtml;

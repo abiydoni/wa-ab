@@ -507,7 +507,18 @@ app.post('/api/device/test-message', requireAuth, async (req, res) => {
     if (!sock || !sock.user) return res.status(400).json({ error: "Device is disconnected" });
 
     try {
-        const jid = formatPhone(number);
+        let jid = formatPhone(number);
+        
+        // Resolve actual JID for personal numbers
+        if (jid.endsWith('@s.whatsapp.net')) {
+            const [wa] = await sock.onWhatsApp(jid);
+            if (wa && wa.exists) {
+                jid = wa.jid;
+            } else {
+                return res.status(400).json({ error: "Nomor WhatsApp tidak terdaftar" });
+            }
+        }
+
         const result = await sock.sendMessage(jid, { text: message });
         if (db) await db.query('UPDATE gateway_devices SET msg_sent = msg_sent + 1 WHERE id = ?', [id]);
         res.json({ success: true, jid: jid, result: result });
@@ -631,7 +642,18 @@ app.post('/api/send-message', async (req, res) => {
     }
 
     try {
-        const jid = formatPhone(number);
+        let jid = formatPhone(number);
+
+        // Resolve actual JID for personal numbers
+        if (jid.endsWith('@s.whatsapp.net')) {
+            const [wa] = await sock.onWhatsApp(jid);
+            if (wa && wa.exists) {
+                jid = wa.jid;
+            } else {
+                return res.status(400).json({ status: false, error: 'Nomor WhatsApp tidak terdaftar.' });
+            }
+        }
+
         const result = await sock.sendMessage(jid, { text: message });
         if (db) await db.query('UPDATE gateway_devices SET msg_sent = msg_sent + 1 WHERE id = ?', [sessionId]);
         res.json({ status: true, message: 'Message sent successfully!', jid: jid, result: result });
