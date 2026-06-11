@@ -235,14 +235,16 @@ async function startSession(sessionId) {
     sock.ev.on('contacts.upsert', (contacts) => {
         const map = sessionContacts.get(sessionId);
         for (const contact of contacts) {
-            map.set(contact.id, contact.name || contact.notify || contact.verifiedName || contact.id.split('@')[0]);
+            if (contact.id && contact.id.endsWith('@s.whatsapp.net')) {
+                map.set(contact.id, contact.name || contact.notify || contact.verifiedName || contact.id.split('@')[0]);
+            }
         }
     });
 
     sock.ev.on('contacts.update', (updates) => {
         const map = sessionContacts.get(sessionId);
         for (const update of updates) {
-            if (update.id && (update.name || update.notify || update.verifiedName)) {
+            if (update.id && update.id.endsWith('@s.whatsapp.net') && (update.name || update.notify || update.verifiedName)) {
                 map.set(update.id, update.name || update.notify || update.verifiedName || update.id.split('@')[0]);
             }
         }
@@ -252,14 +254,14 @@ async function startSession(sessionId) {
         const map = sessionContacts.get(sessionId);
         if (contacts) {
             for (const contact of contacts) {
-                if (contact.id) {
+                if (contact.id && contact.id.endsWith('@s.whatsapp.net')) {
                     map.set(contact.id, contact.name || contact.notify || contact.verifiedName || contact.id.split('@')[0]);
                 }
             }
         }
         if (chats) {
             for (const chat of chats) {
-                if (chat.id && !chat.id.includes('@g.us') && !chat.id.includes('@broadcast')) {
+                if (chat.id && chat.id.endsWith('@s.whatsapp.net')) {
                     if (!map.has(chat.id)) {
                         map.set(chat.id, chat.name || chat.id.split('@')[0]);
                     }
@@ -537,7 +539,9 @@ app.get('/api/device/details', requireAuth, async (req, res) => {
 
     let contacts = [];
     if (sessionContacts.has(id)) {
-        contacts = Array.from(sessionContacts.get(id).entries()).map(([jid, name]) => ({ jid, name }));
+        contacts = Array.from(sessionContacts.get(id).entries())
+            .filter(([jid]) => jid && jid.endsWith('@s.whatsapp.net'))
+            .map(([jid, name]) => ({ jid, name }));
     }
 
     res.json({ groups, contacts });
