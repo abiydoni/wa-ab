@@ -787,6 +787,10 @@
                     const gAvg = Math.round(g/c);
                     const bAvg = Math.round(b/c);
                     const hex = '#' + ((1<<24) + (rAvg<<16) + (gAvg<<8) + bAvg).toString(16).slice(1);
+                    const rDark = Math.floor(rAvg * 0.7);
+                    const gDark = Math.floor(gAvg * 0.7);
+                    const bDark = Math.floor(bAvg * 0.7);
+                    const darkHex = '#' + ((1<<24) + (rDark<<16) + (gDark<<8) + bDark).toString(16).slice(1);
                     
                     const style = document.getElementById('dynamic-theme') || document.createElement('style');
                     style.id = 'dynamic-theme';
@@ -794,18 +798,18 @@
                         .bg-emerald-500 { background-color: ${hex} !important; }
                         .text-emerald-500 { color: ${hex} !important; }
                         .border-emerald-500 { border-color: ${hex} !important; }
-                        .text-emerald-600 { color: ${hex} !important; filter: brightness(0.9); }
-                        .bg-emerald-600 { background-color: ${hex} !important; filter: brightness(0.9); }
-                        .bg-emerald-100 { background-color: ${hex} !important; opacity: 0.15; }
-                        .text-emerald-700 { color: ${hex} !important; filter: brightness(0.8); }
+                        .text-emerald-600 { color: ${darkHex} !important; }
+                        .bg-emerald-600 { background-color: ${darkHex} !important; }
+                        .bg-emerald-100 { background-color: rgba(${rAvg}, ${gAvg}, ${bAvg}, 0.15) !important; }
+                        .text-emerald-700 { color: ${darkHex} !important; }
                         .shadow-emerald-500\\/30 { box-shadow: 0 4px 14px 0 rgba(${rAvg},${gAvg},${bAvg},0.3) !important; }
                         .focus-within\\:border-emerald-500:focus-within { border-color: ${hex} !important; }
                         .focus-within\\:ring-emerald-200:focus-within { box-shadow: 0 0 0 2px rgba(${rAvg},${gAvg},${bAvg},0.2) !important; }
-                        .hover\\:bg-emerald-600:hover { background-color: ${hex} !important; filter: brightness(0.9); }
+                        .hover\\:bg-emerald-600:hover { background-color: ${darkHex} !important; }
                         .hover\\:text-emerald-500:hover { color: ${hex} !important; }
                         .hover\\:border-emerald-500:hover { border-color: ${hex} !important; }
                         .from-emerald-400 { --tw-gradient-from: ${hex} !important; --tw-gradient-from-position:  !important; }
-                        .to-teal-600 { --tw-gradient-to: ${hex} !important; filter: brightness(0.9); --tw-gradient-to-position:  !important; }
+                        .to-teal-600 { --tw-gradient-to: ${darkHex} !important; --tw-gradient-to-position:  !important; }
                         .gradient-text { background: linear-gradient(90deg, ${hex}, #3b82f6) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; }
                         .loader { border-top-color: ${hex} !important; }
                         .tab-btn.active { background-color: ${hex} !important; border-color: ${hex} !important; }
