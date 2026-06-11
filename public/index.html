@@ -82,18 +82,18 @@
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8">
         <!-- Uptime -->
         <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200 hover:shadow-md transition-all group relative overflow-hidden">
-            <div class="absolute -right-4 -top-4 text-emerald-50 opacity-50 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:server" class="text-6xl sm:text-8xl"></iconify-icon></div>
+            <div class="absolute -right-4 -top-4 text-emerald-50 opacity-50 group-hover:scale-110 transition-transform duration-500" id="icon-bg-card-1"><iconify-icon icon="mdi:loading" class="animate-spin text-6xl sm:text-8xl"></iconify-icon></div>
             <div class="relative z-10">
-                <h3 id="title-card-1" class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:clock-outline" class="text-emerald-500 text-base sm:text-lg"></iconify-icon> Server Uptime</h3>
-                <div class="text-lg sm:text-2xl font-black text-slate-800 font-mono tracking-tight live-timer" id="stat-uptime" data-uptime="0"><span class="time-text">00:00:00</span></div>
+                <h3 id="title-card-1" class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:loading" class="animate-spin text-emerald-500 text-base sm:text-lg"></iconify-icon> Memuat...</h3>
+                <div class="text-lg sm:text-2xl font-black text-slate-800 font-mono tracking-tight" id="stat-uptime" data-uptime="0">--</div>
             </div>
         </div>
         <!-- Memory -->
         <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200 hover:shadow-md transition-all group relative overflow-hidden flex flex-col justify-between">
-            <div class="absolute -right-4 -top-4 text-blue-50 opacity-50 group-hover:scale-110 transition-transform duration-500 z-0"><iconify-icon icon="mdi:memory" class="text-6xl sm:text-8xl"></iconify-icon></div>
+            <div class="absolute -right-4 -top-4 text-blue-50 opacity-50 group-hover:scale-110 transition-transform duration-500 z-0" id="icon-bg-card-2"><iconify-icon icon="mdi:loading" class="animate-spin text-6xl sm:text-8xl"></iconify-icon></div>
             <div class="relative z-10 mb-6">
-                <h3 id="title-card-2" class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:chip" class="text-blue-500 text-base sm:text-lg"></iconify-icon> Memory Usage</h3>
-                <div class="text-xl sm:text-2xl font-black text-slate-800" id="stat-memory">0 <span class="text-xs sm:text-sm font-normal text-slate-500">MB</span></div>
+                <h3 id="title-card-2" class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:loading" class="animate-spin text-blue-500 text-base sm:text-lg"></iconify-icon> Memuat...</h3>
+                <div class="text-xl sm:text-2xl font-black text-slate-800" id="stat-memory">--</div>
             </div>
             <!-- Dynamic Graph -->
             <div class="absolute bottom-0 left-0 w-full h-12 sm:h-16 z-0 opacity-80" style="margin-bottom: -1px;">
@@ -108,7 +108,7 @@
             <div class="absolute -right-4 -top-4 text-white opacity-10 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:message-arrow-right" class="text-6xl sm:text-8xl"></iconify-icon></div>
             <div class="relative z-10">
                 <h3 class="text-[10px] sm:text-xs font-bold text-emerald-100 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:send-check" class="text-base sm:text-lg"></iconify-icon> Pesan Terkirim</h3>
-                <div class="text-2xl sm:text-3xl font-black" id="stat-sent">0</div>
+                <div class="text-2xl sm:text-3xl font-black" id="stat-sent">--</div>
             </div>
         </div>
         <!-- Received -->
@@ -116,7 +116,7 @@
             <div class="absolute -right-4 -top-4 text-white opacity-10 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:message-arrow-left" class="text-6xl sm:text-8xl"></iconify-icon></div>
             <div class="relative z-10">
                 <h3 class="text-[10px] sm:text-xs font-bold text-indigo-100 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:message-badge" class="text-base sm:text-lg"></iconify-icon> Pesan Diterima</h3>
-                <div class="text-2xl sm:text-3xl font-black" id="stat-received">0</div>
+                <div class="text-2xl sm:text-3xl font-black" id="stat-received">--</div>
             </div>
         </div>
     </div>
@@ -425,6 +425,12 @@
             if (data.role === 'admin') {
                 document.getElementById('btnUserManagement').classList.remove('hidden');
                 
+                document.getElementById('title-card-1').innerHTML = '<iconify-icon icon="mdi:clock-outline" class="text-emerald-500 text-base sm:text-lg"></iconify-icon> Server Uptime';
+                document.getElementById('icon-bg-card-1').innerHTML = '<iconify-icon icon="mdi:server" class="text-6xl sm:text-8xl"></iconify-icon>';
+                
+                document.getElementById('title-card-2').innerHTML = '<iconify-icon icon="mdi:chip" class="text-blue-500 text-base sm:text-lg"></iconify-icon> Memory Usage';
+                document.getElementById('icon-bg-card-2').innerHTML = '<iconify-icon icon="mdi:memory" class="text-6xl sm:text-8xl"></iconify-icon>';
+                
                 const uptimeEl = document.getElementById('stat-uptime');
                 uptimeEl.setAttribute('data-uptime', data.uptime || 0);
                 if (!uptimeEl.classList.contains('live-timer')) {
@@ -439,11 +445,13 @@
                 document.getElementById('btnUserManagement').classList.add('hidden');
                 
                 document.getElementById('title-card-1').innerHTML = '<iconify-icon icon="mdi:cellphone-link" class="text-emerald-500 text-base sm:text-lg"></iconify-icon> Total Klien';
+                document.getElementById('icon-bg-card-1').innerHTML = '<iconify-icon icon="mdi:cellphone-link" class="text-6xl sm:text-8xl"></iconify-icon>';
                 const uptimeEl = document.getElementById('stat-uptime');
                 uptimeEl.classList.remove('live-timer');
                 uptimeEl.innerHTML = data.totalDevices;
                 
                 document.getElementById('title-card-2').innerHTML = '<iconify-icon icon="mdi:check-network" class="text-blue-500 text-base sm:text-lg"></iconify-icon> Klien Aktif';
+                document.getElementById('icon-bg-card-2').innerHTML = '<iconify-icon icon="mdi:check-network" class="text-6xl sm:text-8xl"></iconify-icon>';
                 document.getElementById('stat-memory').innerHTML = data.connectedDevices;
                 
                 const graph = document.getElementById('memory-graph-svg');
