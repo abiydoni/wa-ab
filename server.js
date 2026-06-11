@@ -89,7 +89,8 @@ async function initDatabase() {
             CREATE TABLE IF NOT EXISTS admin_users (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 username VARCHAR(50) NOT NULL UNIQUE,
-                password VARCHAR(255) NOT NULL
+                password VARCHAR(255) NOT NULL,
+                role VARCHAR(20) DEFAULT 'user'
             )
         `);
 
@@ -99,6 +100,7 @@ async function initDatabase() {
                 name VARCHAR(100),
                 api_key VARCHAR(100) NOT NULL,
                 webhook_url VARCHAR(255),
+                user_id INT,
                 msg_sent INT DEFAULT 0,
                 msg_received INT DEFAULT 0
             )
@@ -106,6 +108,10 @@ async function initDatabase() {
 
         // Safely add columns if they don't exist (for existing tables)
         try {
+            await db.query('ALTER TABLE admin_users ADD COLUMN role VARCHAR(20) DEFAULT "user"');
+        } catch(e) { /* Ignore if columns already exist */ }
+        try {
+            await db.query('ALTER TABLE gateway_devices ADD COLUMN user_id INT');
             await db.query('ALTER TABLE gateway_devices ADD COLUMN msg_sent INT DEFAULT 0');
             await db.query('ALTER TABLE gateway_devices ADD COLUMN msg_received INT DEFAULT 0');
         } catch(e) { /* Ignore if columns already exist */ }
@@ -114,8 +120,11 @@ async function initDatabase() {
         const [admins] = await db.query('SELECT * FROM admin_users');
         if (admins.length === 0) {
             const defaultHash = await bcrypt.hash('admin123', 10);
-            await db.query('INSERT INTO admin_users (username, password) VALUES (?, ?)', ['admin', defaultHash]);
+            await db.query('INSERT INTO admin_users (username, password, role) VALUES (?, ?, "admin")', ['admin', defaultHash]);
             console.log("✅ Default Admin Created (admin / admin123)");
+        } else {
+            // Ensure the main 'admin' user always has the admin role
+            await db.query('UPDATE admin_users SET role = "admin" WHERE username = "admin"');
         }
 
     } catch (error) {
@@ -308,6 +317,24 @@ const requireAuth = (req, res, next) => {
     }
 };
 
+const requireAdmin = (req, res, next) => {
+    if (req.session.isLoggedIn && req.session.role === 'admin') {
+        next();
+    } else {
+        res.status(403).json({ error: "Forbidden: Admin only" });
+    }
+};
+
+async function checkOwnership(req, res, id) {
+    if (req.session.role === 'admin') return true;
+    const [rows] = await db.query('SELECT user_id FROM gateway_devices WHERE id = ?', [id]);
+    if (rows.length === 0 || rows[0].user_id !== req.session.userId) {
+        res.status(403).json({ error: "Forbidden: Not your device" });
+        return false;
+    }
+    return true;
+}
+
 // ==========================================
 // ROUTES: AUTH & FRONTEND
 // ==========================================
@@ -349,6 +376,7 @@ app.post('/api/login', async (req, res) => {
             req.session.isLoggedIn = true;
             req.session.username = username;
             req.session.userId = user.id;
+            req.session.role = user.role;
             res.json({ success: true });
         } else {
             res.status(401).json({ success: false, message: "Username atau password salah!" });
@@ -360,16 +388,16 @@ app.post('/api/login', async (req, res) => {
 
 // --- User Management APIs ---
 
-app.get('/api/users', requireAuth, async (req, res) => {
+app.get('/api/users', requireAdmin, async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT id, username FROM admin_users');
+        const [rows] = await db.query('SELECT id, username, role FROM admin_users');
         res.json({ success: true, data: rows });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
 });
 
-app.post('/api/users', requireAuth, async (req, res) => {
+app.post('/api/users', requireAdmin, async (req, res) => {
     try {
         const { username, password } = req.body;
         if (!username || !password) return res.status(400).json({ success: false, error: "Username and password required" });
@@ -382,7 +410,7 @@ app.post('/api/users', requireAuth, async (req, res) => {
     }
 });
 
-app.put('/api/users/:id/password', requireAuth, async (req, res) => {
+app.put('/api/users/:id/password', requireAdmin, async (req, res) => {
     try {
         const { password } = req.body;
         const { id } = req.params;
@@ -395,7 +423,7 @@ app.put('/api/users/:id/password', requireAuth, async (req, res) => {
     }
 });
 
-app.delete('/api/users/:id', requireAuth, async (req, res) => {
+app.delete('/api/users/:id', requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         // Prevent deleting the currently logged-in user if it's the last one?
@@ -418,7 +446,12 @@ app.post('/api/logout', (req, res) => {
 // ==========================================
 app.get('/api/devices', requireAuth, async (req, res) => {
     if(!db) return res.json({ devices: [] });
-    const [rows] = await db.query('SELECT * FROM gateway_devices');
+    let rows;
+    if (req.session.role === 'admin') {
+        [rows] = await db.query('SELECT * FROM gateway_devices');
+    } else {
+        [rows] = await db.query('SELECT * FROM gateway_devices WHERE user_id = ?', [req.session.userId]);
+    }
     
     // Merge DB info with WhatsApp connection status
     const devices = rows.map(device => {
@@ -460,16 +493,25 @@ app.get('/api/devices', requireAuth, async (req, res) => {
 // GET Global Stats
 app.get('/api/stats', requireAuth, async (req, res) => {
     if (!db) return res.status(500).json({ error: "DB not ready" });
-    const [rows] = await db.query('SELECT SUM(msg_sent) as total_sent, SUM(msg_received) as total_received FROM gateway_devices');
-    const totalSent = rows[0].total_sent || 0;
-    const totalReceived = rows[0].total_received || 0;
+    
+    let totalSent = 0, totalReceived = 0;
+    if (req.session.role === 'admin') {
+        const [rows] = await db.query('SELECT SUM(msg_sent) as total_sent, SUM(msg_received) as total_received FROM gateway_devices');
+        totalSent = rows[0].total_sent || 0;
+        totalReceived = rows[0].total_received || 0;
+    } else {
+        const [rows] = await db.query('SELECT SUM(msg_sent) as total_sent, SUM(msg_received) as total_received FROM gateway_devices WHERE user_id = ?', [req.session.userId]);
+        totalSent = rows[0].total_sent || 0;
+        totalReceived = rows[0].total_received || 0;
+    }
     
     res.json({
         uptime: process.uptime(),
         memory: process.memoryUsage().rss,
         totalDevices: activeSessions.size,
         totalSent,
-        totalReceived
+        totalReceived,
+        role: req.session.role
     });
 });
 
@@ -477,6 +519,7 @@ app.get('/api/stats', requireAuth, async (req, res) => {
 app.get('/api/device/details', requireAuth, async (req, res) => {
     const { id } = req.query;
     if (!id) return res.status(400).json({ error: "ID required" });
+    if (!(await checkOwnership(req, res, id))) return;
 
     const sock = activeSessions.get(id);
     let groups = [];
@@ -503,6 +546,7 @@ app.get('/api/device/details', requireAuth, async (req, res) => {
 // POST Test Message from Dashboard
 app.post('/api/device/test-message', requireAuth, async (req, res) => {
     const { id, number, message } = req.body;
+    if (!(await checkOwnership(req, res, id))) return;
     const sock = activeSessions.get(id);
     if (!sock || !sock.user) return res.status(400).json({ error: "Device is disconnected" });
 
@@ -535,7 +579,7 @@ app.post('/api/devices/add', requireAuth, async (req, res) => {
     const apiKey = "wa-" + require('crypto').randomBytes(16).toString('hex');
 
     try {
-        await db.query('INSERT INTO gateway_devices (id, name, api_key) VALUES (?, ?, ?)', [id, name, apiKey]);
+        await db.query('INSERT INTO gateway_devices (id, name, api_key, user_id) VALUES (?, ?, ?, ?)', [id, name, apiKey, req.session.userId]);
         
         // Start WA Session
         if (!activeSessions.has(id)) {
@@ -551,6 +595,7 @@ app.post('/api/devices/add', requireAuth, async (req, res) => {
 app.post('/api/devices/action', requireAuth, async (req, res) => {
     try {
         const { id, action } = req.body;
+        if (!(await checkOwnership(req, res, id))) return;
         
         if (action === 'start') {
             stoppedSessions.delete(id);
@@ -577,6 +622,7 @@ app.post('/api/devices/action', requireAuth, async (req, res) => {
 
 app.post('/api/devices/update', requireAuth, async (req, res) => {
     const { id, webhook_url } = req.body;
+    if (!(await checkOwnership(req, res, id))) return;
     try {
         await db.query('UPDATE gateway_devices SET webhook_url = ? WHERE id = ?', [webhook_url, id]);
         res.json({ success: true });
@@ -588,6 +634,7 @@ app.post('/api/devices/update', requireAuth, async (req, res) => {
 app.delete('/api/devices/delete', requireAuth, async (req, res) => {
     const sessionId = req.query.id;
     if (!sessionId) return res.status(400).json({ error: "Parameter 'id' is required" });
+    if (!(await checkOwnership(req, res, sessionId))) return;
 
     // DB Remove
     await db.query('DELETE FROM gateway_devices WHERE id = ?', [sessionId]);
@@ -607,8 +654,9 @@ app.delete('/api/devices/delete', requireAuth, async (req, res) => {
     res.json({ success: true });
 });
 
-app.get('/api/session/qr', requireAuth, (req, res) => {
+app.get('/api/session/qr', requireAuth, async (req, res) => {
     const sessionId = req.query.id;
+    if (!(await checkOwnership(req, res, sessionId))) return;
     const qrImage = qrCodes.get(sessionId);
     res.json({ qr: qrImage || null });
 });
