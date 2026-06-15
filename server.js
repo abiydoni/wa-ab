@@ -245,6 +245,12 @@ async function startSession(sessionId) {
             console.log(`✅ Session ${sessionId} connected!`);
             qrCodes.delete(sessionId);
             activeSessions.set(sessionId, sock);
+
+            // Record the exact time the device was linked
+            const linkedFile = path.join(sessionPath, 'linked_at.txt');
+            if (!fs.existsSync(linkedFile)) {
+                fs.writeFileSync(linkedFile, Date.now().toString());
+            }
         }
     });
 
@@ -522,15 +528,10 @@ app.get('/api/devices', requireAuth, async (req, res) => {
 
         let uptimeSeconds = 0;
         if (status === 'connected') {
-            const sessionPath = path.join(sessionsDir, device.id);
-            if (fs.existsSync(sessionPath)) {
-                try {
-                    const stats = fs.statSync(sessionPath);
-                    const linkedAt = stats.birthtimeMs || stats.mtimeMs;
-                    uptimeSeconds = Math.floor((Date.now() - linkedAt) / 1000);
-                } catch(e) {
-                    uptimeSeconds = sock.connectedAt ? Math.floor((Date.now() - sock.connectedAt) / 1000) : 0;
-                }
+            const linkedFile = path.join(sessionsDir, device.id, 'linked_at.txt');
+            if (fs.existsSync(linkedFile)) {
+                const linkedAt = parseInt(fs.readFileSync(linkedFile, 'utf8')) || Date.now();
+                uptimeSeconds = Math.floor((Date.now() - linkedAt) / 1000);
             } else {
                 uptimeSeconds = sock.connectedAt ? Math.floor((Date.now() - sock.connectedAt) / 1000) : 0;
             }
@@ -603,7 +604,7 @@ app.get('/api/device/details', requireAuth, async (req, res) => {
     let contacts = [];
     if (sessionContacts.has(id)) {
         contacts = Array.from(sessionContacts.get(id).entries())
-            .filter(([jid]) => jid && jid.endsWith('@s.whatsapp.net'))
+            .filter(([jid]) => jid && jid.endsWith('@s.whatsapp.net') && !jid.startsWith('0@'))
             .map(([jid, name]) => ({ jid, name }));
     }
 
@@ -709,14 +710,13 @@ app.delete('/api/devices/delete', requireAuth, async (req, res) => {
     // WA Logout
     const sock = activeSessions.get(sessionId);
     if (sock) {
-        await sock.logout();
+        try { await sock.logout(); } catch(e) {}
         activeSessions.delete(sessionId);
         qrCodes.delete(sessionId);
         authStates.delete(sessionId);
-    } else {
-        const sessionPath = path.join(sessionsDir, sessionId);
-        if (fs.existsSync(sessionPath)) fs.rmSync(sessionPath, { recursive: true, force: true });
     }
+    const sessionPath = path.join(sessionsDir, sessionId);
+    if (fs.existsSync(sessionPath)) fs.rmSync(sessionPath, { recursive: true, force: true });
 
     res.json({ success: true });
 });
