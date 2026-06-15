@@ -115,6 +115,9 @@ async function initDatabase() {
             await db.query('ALTER TABLE gateway_devices ADD COLUMN msg_sent INT DEFAULT 0');
             await db.query('ALTER TABLE gateway_devices ADD COLUMN msg_received INT DEFAULT 0');
         } catch(e) { /* Ignore if columns already exist */ }
+        try {
+            await db.query('ALTER TABLE gateway_devices ADD COLUMN linked_at BIGINT');
+        } catch(e) { /* Ignore if columns already exist */ }
 
         // 3. Insert default admin if not exists
         const [admins] = await db.query('SELECT * FROM admin_users');
@@ -217,6 +220,8 @@ async function startSession(sessionId) {
             try {
                 const qrImage = await QRCode.toDataURL(qr);
                 qrCodes.set(sessionId, qrImage);
+                // Reset linked time because device needs a new scan
+                if (db) db.query('UPDATE gateway_devices SET linked_at = NULL WHERE id = ?', [sessionId]).catch(()=>{});
             } catch (err) { }
         }
 
@@ -246,10 +251,18 @@ async function startSession(sessionId) {
             qrCodes.delete(sessionId);
             activeSessions.set(sessionId, sock);
 
-            // Record the exact time the device was linked
-            const linkedFile = path.join(sessionPath, 'linked_at.txt');
-            if (!fs.existsSync(linkedFile)) {
-                fs.writeFileSync(linkedFile, Date.now().toString());
+            // Record the exact time the device was linked in DB
+            if (db) {
+                db.query('SELECT linked_at FROM gateway_devices WHERE id = ?', [sessionId]).then(([rows]) => {
+                    if (rows.length > 0 && !rows[0].linked_at) {
+                        let initialTime = Date.now();
+                        try {
+                            const stats = fs.statSync(path.join(sessionPath, 'creds.json'));
+                            if (stats.birthtimeMs) initialTime = stats.birthtimeMs;
+                        } catch(e) {}
+                        db.query('UPDATE gateway_devices SET linked_at = ? WHERE id = ?', [initialTime, sessionId]).catch(()=>{});
+                    }
+                }).catch(()=>{});
             }
         }
     });
@@ -528,10 +541,8 @@ app.get('/api/devices', requireAuth, async (req, res) => {
 
         let uptimeSeconds = 0;
         if (status === 'connected') {
-            const linkedFile = path.join(sessionsDir, device.id, 'linked_at.txt');
-            if (fs.existsSync(linkedFile)) {
-                const linkedAt = parseInt(fs.readFileSync(linkedFile, 'utf8')) || Date.now();
-                uptimeSeconds = Math.floor((Date.now() - linkedAt) / 1000);
+            if (device.linked_at) {
+                uptimeSeconds = Math.floor((Date.now() - device.linked_at) / 1000);
             } else {
                 uptimeSeconds = sock.connectedAt ? Math.floor((Date.now() - sock.connectedAt) / 1000) : 0;
             }
