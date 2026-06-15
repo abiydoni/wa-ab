@@ -170,8 +170,27 @@ async function startSession(sessionId) {
     const { version, isLatest } = await fetchLatestBaileysVersion();
 
     if (!sessionContacts.has(sessionId)) {
-        sessionContacts.set(sessionId, new Map());
+        let savedContacts = new Map();
+        try {
+            const contactsFile = path.join(sessionPath, 'contacts.json');
+            if (fs.existsSync(contactsFile)) {
+                const data = JSON.parse(fs.readFileSync(contactsFile, 'utf8'));
+                savedContacts = new Map(data);
+            }
+        } catch (e) {}
+        sessionContacts.set(sessionId, savedContacts);
     }
+
+    // Function to save contacts to file
+    const saveContacts = () => {
+        try {
+            const contactsFile = path.join(sessionPath, 'contacts.json');
+            const map = sessionContacts.get(sessionId);
+            if (map) {
+                fs.writeFileSync(contactsFile, JSON.stringify(Array.from(map.entries())));
+            }
+        } catch (e) {}
+    };
 
     console.log(`Starting session: ${sessionId}`);
 
@@ -185,7 +204,7 @@ async function startSession(sessionId) {
         browser: ['Ubuntu', 'Chrome', '20.0.04'],
         logger: pino({ level: 'error' }),
         markOnlineOnConnect: true,
-        syncFullHistory: false,
+        syncFullHistory: true,
         getMessage: async (key) => {
             return undefined;
         }
@@ -239,6 +258,7 @@ async function startSession(sessionId) {
                 map.set(contact.id, contact.name || contact.notify || contact.verifiedName || contact.id.split('@')[0]);
             }
         }
+        saveContacts();
     });
 
     sock.ev.on('contacts.update', (updates) => {
@@ -248,6 +268,7 @@ async function startSession(sessionId) {
                 map.set(update.id, update.name || update.notify || update.verifiedName || update.id.split('@')[0]);
             }
         }
+        saveContacts();
     });
 
     sock.ev.on('messaging-history.set', ({ chats, contacts }) => {
@@ -268,6 +289,7 @@ async function startSession(sessionId) {
                 }
             }
         }
+        saveContacts();
     });
 
     // WEBHOOK LOGIC: Send incoming messages to client apps
