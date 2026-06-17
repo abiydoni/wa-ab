@@ -379,17 +379,26 @@
         const dtEl = document.getElementById('current-datetime');
         if (dtEl) {
             const offset = window.serverTimeOffset || 0;
-            const jktTimeStr = new Date(Date.now() + offset).toLocaleString("en-US", {timeZone: "Asia/Jakarta"});
-            const now = new Date(jktTimeStr);
-            const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-            const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-            const dayName = days[now.getDay()];
-            const day = now.getDate();
-            const month = months[now.getMonth()];
-            const year = now.getFullYear();
-            const h = now.getHours().toString().padStart(2, '0');
-            const m = now.getMinutes().toString().padStart(2, '0');
-            const s = now.getSeconds().toString().padStart(2, '0');
+            const serverTimeMs = Date.now() + offset;
+            const jktDate = new Date(serverTimeMs);
+            
+            const formatter = new Intl.DateTimeFormat('id-ID', {
+                timeZone: 'Asia/Jakarta',
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+            });
+            
+            let dayName, day, month, year, h, m, s;
+            for (const p of formatter.formatToParts(jktDate)) {
+                if (p.type === 'weekday') dayName = p.value;
+                if (p.type === 'day') day = p.value;
+                if (p.type === 'month') month = p.value;
+                if (p.type === 'year') year = p.value;
+                if (p.type === 'hour') h = p.value;
+                if (p.type === 'minute') m = p.value;
+                if (p.type === 'second') s = p.value;
+            }
+            
             dtEl.innerText = `${dayName}, ${day} ${month} ${year} • ${h}:${m}:${s} WIB`;
         }
     }, 1000);
