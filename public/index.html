@@ -378,7 +378,8 @@
 
         const dtEl = document.getElementById('current-datetime');
         if (dtEl) {
-            const now = new Date();
+            const jktTimeStr = new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"});
+            const now = new Date(jktTimeStr);
             const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
             const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
             const dayName = days[now.getDay()];
@@ -388,7 +389,7 @@
             const h = now.getHours().toString().padStart(2, '0');
             const m = now.getMinutes().toString().padStart(2, '0');
             const s = now.getSeconds().toString().padStart(2, '0');
-            dtEl.innerText = `${dayName}, ${day} ${month} ${year} • ${h}:${m}:${s}`;
+            dtEl.innerText = `${dayName}, ${day} ${month} ${year} • ${h}:${m}:${s} WIB`;
         }
     }, 1000);
 
