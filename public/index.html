@@ -367,6 +367,16 @@
         return `${prefixStr}${h}:${m}:${s}`;
     }
 
+    let trueTimeOffset = 0;
+    fetch('https://worldtimeapi.org/api/timezone/Asia/Jakarta')
+        .then(res => res.json())
+        .then(data => {
+            if (data.unixtime) {
+                // Correct local Date.now() to real world time
+                trueTimeOffset = (data.unixtime * 1000) - Date.now();
+            }
+        }).catch(e => console.log('TimeSync error:', e));
+
     setInterval(() => {
         document.querySelectorAll('.live-timer').forEach(el => {
             let s = parseInt(el.getAttribute('data-uptime')) || 0;
@@ -378,7 +388,7 @@
 
         const dtEl = document.getElementById('current-datetime');
         if (dtEl) {
-            const offset = window.serverTimeOffset || 0;
+            const offset = trueTimeOffset !== 0 ? trueTimeOffset : (window.serverTimeOffset || 0);
             const serverTimeMs = Date.now() + offset;
             const jktDate = new Date(serverTimeMs);
             
