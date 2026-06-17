@@ -78,6 +78,14 @@
 
 <main class="flex-grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
 
+    <!-- Global Date Time -->
+    <div class="mb-4 hidden" id="datetime-container">
+        <div class="inline-flex items-center gap-2 bg-white px-4 py-2.5 rounded-xl shadow-sm border border-slate-200 text-xs sm:text-sm font-bold text-slate-600">
+            <iconify-icon icon="mdi:calendar-clock" class="text-emerald-500 text-lg"></iconify-icon>
+            <span id="current-datetime">--</span>
+        </div>
+    </div>
+
     <!-- Stats Grid -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8">
         <!-- Uptime -->
@@ -86,10 +94,6 @@
             <div class="relative z-10">
                 <h3 id="title-card-1" class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:loading" class="animate-spin text-emerald-500 text-base sm:text-lg"></iconify-icon> Memuat...</h3>
                 <div class="text-lg sm:text-2xl font-black text-slate-800 font-mono tracking-tight" id="stat-uptime" data-uptime="0">--</div>
-                <div class="mt-2 text-[10px] sm:text-xs font-medium text-slate-500 flex items-center gap-1.5 hidden" id="datetime-container">
-                    <iconify-icon icon="mdi:calendar-clock" class="text-emerald-500 text-sm sm:text-base"></iconify-icon>
-                    <span id="current-datetime">--</span>
-                </div>
             </div>
         </div>
         <!-- Memory -->
@@ -400,7 +404,7 @@
                 if (p.type === 'second') s = p.value;
             }
             
-            dtEl.innerHTML = `${dayName}, ${day} ${month} ${year}<br/><span class="text-emerald-600 font-bold text-sm sm:text-base">${h}:${m}:${s} WIB</span>`;
+            dtEl.innerHTML = `${dayName}, ${day} ${month} ${year} <span class="mx-1 text-slate-300">|</span> <span class="text-emerald-600">${h}:${m}:${s} WIB</span>`;
         }
     }, 1000);
 
