@@ -86,6 +86,10 @@
             <div class="relative z-10">
                 <h3 id="title-card-1" class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:loading" class="animate-spin text-emerald-500 text-base sm:text-lg"></iconify-icon> Memuat...</h3>
                 <div class="text-lg sm:text-2xl font-black text-slate-800 font-mono tracking-tight" id="stat-uptime" data-uptime="0">--</div>
+                <div class="mt-2 text-[10px] sm:text-xs font-medium text-slate-500 flex items-center gap-1.5 hidden" id="datetime-container">
+                    <iconify-icon icon="mdi:calendar-clock" class="text-emerald-500 text-sm sm:text-base"></iconify-icon>
+                    <span id="current-datetime">--</span>
+                </div>
             </div>
         </div>
         <!-- Memory -->
@@ -371,6 +375,21 @@
             const textEl = el.querySelector('.time-text');
             if(textEl) textEl.innerText = formatDigitalTimer(s);
         });
+
+        const dtEl = document.getElementById('current-datetime');
+        if (dtEl) {
+            const now = new Date();
+            const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            const dayName = days[now.getDay()];
+            const day = now.getDate();
+            const month = months[now.getMonth()];
+            const year = now.getFullYear();
+            const h = now.getHours().toString().padStart(2, '0');
+            const m = now.getMinutes().toString().padStart(2, '0');
+            const s = now.getSeconds().toString().padStart(2, '0');
+            dtEl.innerText = `${dayName}, ${day} ${month} ${year} • ${h}:${m}:${s}`;
+        }
     }, 1000);
 
     let memoryHistory = Array(20).fill(0);
@@ -438,6 +457,9 @@
                 }
                 uptimeEl.innerHTML = `<span class="time-text">${formatDigitalTimer(data.uptime)}</span>`;
                 
+                const dtContainer = document.getElementById('datetime-container');
+                if (dtContainer) dtContainer.classList.remove('hidden');
+                
                 const memMB = Math.round(data.memory / 1024 / 1024);
                 document.getElementById('stat-memory').innerHTML = `${memMB} <span class="text-sm font-normal text-slate-500">MB</span>`;
                 updateMemoryGraph(memMB);
@@ -449,6 +471,9 @@
                 const uptimeEl = document.getElementById('stat-uptime');
                 uptimeEl.classList.remove('live-timer');
                 uptimeEl.innerHTML = data.totalDevices;
+                
+                const dtContainer = document.getElementById('datetime-container');
+                if (dtContainer) dtContainer.classList.add('hidden');
                 
                 document.getElementById('title-card-2').innerHTML = '<iconify-icon icon="mdi:check-network" class="text-blue-500 text-base sm:text-lg"></iconify-icon> Klien Aktif';
                 document.getElementById('icon-bg-card-2').innerHTML = '<iconify-icon icon="mdi:check-network" class="text-6xl sm:text-8xl"></iconify-icon>';
