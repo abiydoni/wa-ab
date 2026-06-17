@@ -588,7 +588,8 @@ app.get('/api/stats', requireAuth, async (req, res) => {
         connectedDevices,
         totalSent,
         totalReceived,
-        role: req.session.role
+        role: req.session.role,
+        serverTime: Date.now()
     });
 });
 

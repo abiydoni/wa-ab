@@ -378,7 +378,8 @@
 
         const dtEl = document.getElementById('current-datetime');
         if (dtEl) {
-            const jktTimeStr = new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"});
+            const offset = window.serverTimeOffset || 0;
+            const jktTimeStr = new Date(Date.now() + offset).toLocaleString("en-US", {timeZone: "Asia/Jakarta"});
             const now = new Date(jktTimeStr);
             const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
             const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
@@ -438,6 +439,10 @@
             const res = await fetch(`${API_BASE}/stats`);
             if(!res.ok) return;
             const data = await res.json();
+            
+            if (data.serverTime) {
+                window.serverTimeOffset = data.serverTime - Date.now();
+            }
             
             document.getElementById('stat-sent').innerText = data.totalSent;
             document.getElementById('stat-received').innerText = data.totalReceived;
