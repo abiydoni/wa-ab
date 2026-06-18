@@ -45,6 +45,7 @@ const stoppedSessions = new Set();
 const reconnectCounts = new Map();
 const wasConnectedBefore = new Set();
 const startingSessions = new Set();
+const disconnectHistory = new Map();
 
 const sessionContacts = new Map();
 
@@ -251,15 +252,31 @@ async function startSession(sessionId) {
             qrCodes.delete(sessionId);
 
             if (shouldReconnect) {
-                if (!reconnectingSessions.has(sessionId)) {
-                    reconnectingSessions.add(sessionId);
-                    console.log(`[${sessionId}] Connection closed due to: ${lastDisconnect.error?.message}. Reconnecting in 5s...`);
-                    setTimeout(() => {
-                        reconnectingSessions.delete(sessionId);
-                        if (!activeSessions.has(sessionId) && !startingSessions.has(sessionId)) {
-                            startSession(sessionId);
-                        }
-                    }, 5000);
+                const now = Date.now();
+                let history = disconnectHistory.get(sessionId) || [];
+                // Filter hanya disconnect dalam 60 detik terakhir
+                history = history.filter(t => now - t < 60000);
+                history.push(now);
+                disconnectHistory.set(sessionId, history);
+
+                if (history.length >= 5) {
+                    console.log(`[${sessionId}] 🚨 SESI CORRUPT TERDETEKSI (Putus 5x dalam semenit). Menghapus sesi secara otomatis!`);
+                    disconnectHistory.delete(sessionId);
+                    try { fs.rmSync(sessionPath, { recursive: true, force: true }); } catch(e){}
+                    sessionContacts.delete(sessionId);
+                    authStates.delete(sessionId);
+                    // Tidak di-reconnect lagi agar user scan QR baru
+                } else {
+                    if (!reconnectingSessions.has(sessionId)) {
+                        reconnectingSessions.add(sessionId);
+                        console.log(`[${sessionId}] Connection closed due to: ${lastDisconnect.error?.message}. Reconnecting in 5s...`);
+                        setTimeout(() => {
+                            reconnectingSessions.delete(sessionId);
+                            if (!activeSessions.has(sessionId) && !startingSessions.has(sessionId)) {
+                                startSession(sessionId);
+                            }
+                        }, 5000);
+                    }
                 }
             } else if (!isStoppedByUser) {
                 fs.rmSync(sessionPath, { recursive: true, force: true });
