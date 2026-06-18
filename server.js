@@ -124,6 +124,7 @@ async function initDatabase() {
         try {
             await db.query('ALTER TABLE gateway_devices ADD COLUMN linked_at BIGINT');
         } catch(e) { /* Ignore if columns already exist */ }
+        try { await db.query('ALTER TABLE gateway_devices ADD COLUMN is_stopped BOOLEAN DEFAULT FALSE'); } catch(e){}
 
         // 3. Insert default admin if not exists
         const [admins] = await db.query('SELECT * FROM admin_users');
@@ -596,7 +597,9 @@ app.get('/api/devices', requireAuth, async (req, res) => {
         const sock = activeSessions.get(device.id);
         const hasSessionFolder = fs.existsSync(path.join(sessionsDir, device.id));
         let status = 'disconnected';
-        if (sock && sock.isActuallyConnected) {
+        if (device.is_stopped) {
+            status = 'stopped';
+        } else if (sock && sock.isActuallyConnected) {
             status = 'connected';
         } else if (activeSessions.has(device.id)) {
             status = 'starting_or_waiting_qr';
@@ -755,11 +758,13 @@ app.post('/api/devices/action', requireAuth, async (req, res) => {
         if (!(await checkOwnership(req, res, id))) return;
         
         if (action === 'start') {
+            if (db) await db.query('UPDATE gateway_devices SET is_stopped = FALSE WHERE id = ?', [id]);
             stoppedSessions.delete(id);
             if (!activeSessions.has(id)) {
                 await startSession(id);
             }
         } else if (action === 'stop') {
+            if (db) await db.query('UPDATE gateway_devices SET is_stopped = TRUE WHERE id = ?', [id]);
             stoppedSessions.add(id);
             const sock = activeSessions.get(id);
             if (sock) {
@@ -890,7 +895,7 @@ app.post('/api/send-message', async (req, res) => {
 // ==========================================
 async function autoStartSessions() {
     if (!db) return;
-    const [rows] = await db.query('SELECT id FROM gateway_devices');
+    const [rows] = await db.query('SELECT id FROM gateway_devices WHERE is_stopped = FALSE OR is_stopped IS NULL');
     for (const row of rows) {
         console.log(`Auto-starting saved session: ${row.id}`);
         startSession(row.id);
@@ -901,10 +906,10 @@ async function autoStartSessions() {
 setInterval(async () => {
     if (!db) return;
     try {
-        const [rows] = await db.query('SELECT id FROM gateway_devices');
+        const [rows] = await db.query('SELECT id, is_stopped FROM gateway_devices');
         for (const row of rows) {
             const sessionId = row.id;
-            if (!stoppedSessions.has(sessionId)) {
+            if (!stoppedSessions.has(sessionId) && !row.is_stopped) {
                 const sock = activeSessions.get(sessionId);
                 const sessionPath = path.join(__dirname, 'sessions', sessionId);
                 const hasSessionFolder = fs.existsSync(sessionPath);
