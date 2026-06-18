@@ -44,6 +44,7 @@ const reconnectingSessions = new Set();
 const stoppedSessions = new Set();
 const reconnectCounts = new Map();
 const wasConnectedBefore = new Set();
+const startingSessions = new Set();
 
 const sessionContacts = new Map();
 
@@ -163,16 +164,31 @@ const formatPhone = (phone) => {
 };
 
 async function startSession(sessionId) {
+    if (activeSessions.has(sessionId) || startingSessions.has(sessionId)) {
+        console.log(`[System] Mencegah startSession ganda untuk: ${sessionId}`);
+        return;
+    }
+    startingSessions.add(sessionId);
+
     const sessionPath = path.join(sessionsDir, sessionId);
     
     let authState = authStates.get(sessionId);
     if (!authState) {
-        authState = await useMultiFileAuthState(sessionPath);
-        authStates.set(sessionId, authState);
+        try {
+            authState = await useMultiFileAuthState(sessionPath);
+            authStates.set(sessionId, authState);
+        } catch (e) {
+            startingSessions.delete(sessionId);
+            throw e;
+        }
     }
     
     const { state, saveCreds } = authState;
-    const { version, isLatest } = await fetchLatestBaileysVersion();
+    let version = [2, 3000, 1015901307];
+    try {
+        const res = await fetchLatestBaileysVersion();
+        if (res && res.version) version = res.version;
+    } catch(e) {}
 
     if (!sessionContacts.has(sessionId)) {
         let savedContacts = new Map();
@@ -240,7 +256,9 @@ async function startSession(sessionId) {
                     console.log(`[${sessionId}] Connection closed due to: ${lastDisconnect.error?.message}. Reconnecting in 5s...`);
                     setTimeout(() => {
                         reconnectingSessions.delete(sessionId);
-                        startSession(sessionId);
+                        if (!activeSessions.has(sessionId) && !startingSessions.has(sessionId)) {
+                            startSession(sessionId);
+                        }
                     }, 5000);
                 }
             } else if (!isStoppedByUser) {
@@ -357,6 +375,7 @@ async function startSession(sessionId) {
     });
 
     activeSessions.set(sessionId, sock);
+    startingSessions.delete(sessionId);
     return sock;
 }
 
