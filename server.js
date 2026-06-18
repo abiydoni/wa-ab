@@ -262,7 +262,21 @@ async function startSession(sessionId) {
                 if (history.length >= 5) {
                     console.log(`[${sessionId}] 🚨 SESI CORRUPT TERDETEKSI (Putus 5x dalam semenit). Menghapus sesi secara otomatis!`);
                     disconnectHistory.delete(sessionId);
-                    try { fs.rmSync(sessionPath, { recursive: true, force: true }); } catch(e){}
+                    if (sock) {
+                        try { await sock.logout(); console.log(`[${sessionId}] Logout berhasil.`); } catch(e){}
+                    }
+                    setTimeout(() => {
+                        try { 
+                            fs.rmSync(sessionPath, { recursive: true, force: true }); 
+                            console.log(`[${sessionId}] Folder sesi berhasil dihapus sampai bersih.`);
+                        } catch(e) {
+                            console.error(`[${sessionId}] Gagal hapus folder sesi:`, e.message);
+                            try {
+                                const files = fs.readdirSync(sessionPath);
+                                for (const file of files) fs.unlinkSync(path.join(sessionPath, file));
+                            } catch(err){}
+                        }
+                    }, 2000);
                     sessionContacts.delete(sessionId);
                     authStates.delete(sessionId);
                     // Tidak di-reconnect lagi agar user scan QR baru
@@ -777,7 +791,17 @@ app.delete('/api/devices/delete', requireAuth, async (req, res) => {
         authStates.delete(sessionId);
     }
     const sessionPath = path.join(sessionsDir, sessionId);
-    if (fs.existsSync(sessionPath)) fs.rmSync(sessionPath, { recursive: true, force: true });
+    setTimeout(() => {
+        if (fs.existsSync(sessionPath)) {
+            try { fs.rmSync(sessionPath, { recursive: true, force: true }); } 
+            catch(e) {
+                try {
+                    const files = fs.readdirSync(sessionPath);
+                    for (const file of files) fs.unlinkSync(path.join(sessionPath, file));
+                } catch(err){}
+            }
+        }
+    }, 2000);
 
     res.json({ success: true });
 });
