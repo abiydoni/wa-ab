@@ -790,7 +790,7 @@ app.post('/api/send-message', async (req, res) => {
 });
 
 // ==========================================
-// BOOTSTRAP
+// BOOTSTRAP & WATCHDOG
 // ==========================================
 async function autoStartSessions() {
     if (!db) return;
@@ -800,6 +800,40 @@ async function autoStartSessions() {
         startSession(row.id);
     }
 }
+
+// Watchdog Auto-Recovery (Every 1 Minute)
+setInterval(async () => {
+    if (!db) return;
+    try {
+        const [rows] = await db.query('SELECT id FROM gateway_devices');
+        for (const row of rows) {
+            const sessionId = row.id;
+            if (!stoppedSessions.has(sessionId)) {
+                const sock = activeSessions.get(sessionId);
+                const sessionPath = path.join(__dirname, 'sessions', sessionId);
+                const hasSessionFolder = fs.existsSync(sessionPath);
+                
+                // If the folder exists (has been logged in) but the socket is not fully connected
+                if (hasSessionFolder && (!sock || !sock.user) && !reconnectingSessions.has(sessionId)) {
+                    console.log(`[Watchdog] Session ${sessionId} terdeteksi mati/menggantung. Mencoba restart otomatis...`);
+                    if (sock) {
+                        try { if (sock.ws) sock.ws.close(); } catch(e){}
+                        activeSessions.delete(sessionId);
+                    }
+                    reconnectingSessions.add(sessionId);
+                    try {
+                        startSession(sessionId);
+                    } catch(e) {
+                        console.error(`[Watchdog] Gagal restart ${sessionId}:`, e.message);
+                    }
+                    setTimeout(() => reconnectingSessions.delete(sessionId), 15000);
+                }
+            }
+        }
+    } catch(err) {
+        console.error('[Watchdog] Error:', err.message);
+    }
+}, 60000);
 
 app.listen(PORT, async () => {
     console.log(`🚀 WA Gateway API running on http://localhost:${PORT}`);
