@@ -119,6 +119,8 @@ async function initDatabase() {
             await db.query('ALTER TABLE gateway_devices ADD COLUMN msg_sent INT DEFAULT 0');
             await db.query('ALTER TABLE gateway_devices ADD COLUMN msg_received INT DEFAULT 0');
         } catch(e) { /* Ignore if columns already exist */ }
+        try { await db.query('ALTER TABLE gateway_devices ADD COLUMN last_msg_sent BIGINT'); } catch(e){}
+        try { await db.query('ALTER TABLE gateway_devices ADD COLUMN last_msg_received BIGINT'); } catch(e){}
         try {
             await db.query('ALTER TABLE gateway_devices ADD COLUMN linked_at BIGINT');
         } catch(e) { /* Ignore if columns already exist */ }
@@ -385,7 +387,7 @@ async function startSession(sessionId) {
 
         if(textMessage && db) {
             // Increment Received Counter
-            await db.query('UPDATE gateway_devices SET msg_received = msg_received + 1 WHERE id = ?', [sessionId]);
+            await db.query('UPDATE gateway_devices SET msg_received = msg_received + 1, last_msg_received = ? WHERE id = ?', [Date.now(), sessionId]);
 
             // Find webhook url for this session
             const [rows] = await db.query('SELECT webhook_url FROM gateway_devices WHERE id = ?', [sessionId]);
@@ -623,21 +625,26 @@ app.get('/api/stats', requireAuth, async (req, res) => {
     if (!db) return res.status(500).json({ error: "DB not ready" });
     
     let totalSent = 0, totalReceived = 0, totalDevices = 0, connectedDevices = 0;
+    let lastMsgSent = 0, lastMsgReceived = 0;
     
     if (req.session.role === 'admin') {
-        const [rows] = await db.query('SELECT SUM(msg_sent) as total_sent, SUM(msg_received) as total_received, COUNT(*) as total_dev FROM gateway_devices');
+        const [rows] = await db.query('SELECT SUM(msg_sent) as total_sent, SUM(msg_received) as total_received, MAX(last_msg_sent) as last_sent, MAX(last_msg_received) as last_received, COUNT(*) as total_dev FROM gateway_devices');
         totalSent = rows[0].total_sent || 0;
         totalReceived = rows[0].total_received || 0;
         totalDevices = rows[0].total_dev || 0;
+        lastMsgSent = rows[0].last_sent || 0;
+        lastMsgReceived = rows[0].last_received || 0;
         
         // Count all connected sessions globally
         connectedDevices = Array.from(activeSessions.values()).filter(sock => sock && sock.isActuallyConnected).length;
     } else {
-        const [rows] = await db.query('SELECT id, msg_sent, msg_received FROM gateway_devices WHERE user_id = ?', [req.session.userId]);
+        const [rows] = await db.query('SELECT id, msg_sent, msg_received, last_msg_sent, last_msg_received FROM gateway_devices WHERE user_id = ?', [req.session.userId]);
         
         for (const row of rows) {
             totalSent += row.msg_sent || 0;
             totalReceived += row.msg_received || 0;
+            if (row.last_msg_sent > lastMsgSent) lastMsgSent = row.last_msg_sent;
+            if (row.last_msg_received > lastMsgReceived) lastMsgReceived = row.last_msg_received;
             totalDevices++;
             
             const sock = activeSessions.get(row.id);
@@ -652,6 +659,8 @@ app.get('/api/stats', requireAuth, async (req, res) => {
         connectedDevices,
         totalSent,
         totalReceived,
+        lastMsgSent,
+        lastMsgReceived,
         role: req.session.role,
         serverTime: Date.now()
     });
@@ -708,7 +717,7 @@ app.post('/api/device/test-message', requireAuth, async (req, res) => {
         }
 
         const result = await sock.sendMessage(jid, { text: message });
-        if (db) await db.query('UPDATE gateway_devices SET msg_sent = msg_sent + 1 WHERE id = ?', [id]);
+        if (db) await db.query('UPDATE gateway_devices SET msg_sent = msg_sent + 1, last_msg_sent = ? WHERE id = ?', [Date.now(), id]);
         res.json({ success: true, jid: jid, result: result });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -856,7 +865,7 @@ app.post('/api/send-message', async (req, res) => {
         }
 
         const result = await sock.sendMessage(jid, { text: message });
-        if (db) await db.query('UPDATE gateway_devices SET msg_sent = msg_sent + 1 WHERE id = ?', [sessionId]);
+        if (db) await db.query('UPDATE gateway_devices SET msg_sent = msg_sent + 1, last_msg_sent = ? WHERE id = ?', [Date.now(), sessionId]);
         res.json({ status: true, message: 'Message sent successfully!', jid: jid, result: result });
     } catch (error) {
         res.status(500).json({ status: false, error: 'Failed to send message.' });

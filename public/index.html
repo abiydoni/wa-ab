@@ -116,7 +116,8 @@
             <div class="absolute -right-4 -top-4 text-white opacity-10 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:message-arrow-right" class="text-6xl sm:text-8xl"></iconify-icon></div>
             <div class="relative z-10">
                 <h3 class="text-[10px] sm:text-xs font-bold text-emerald-100 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:send-check" class="text-base sm:text-lg"></iconify-icon> Pesan Terkirim</h3>
-                <div class="text-2xl sm:text-3xl font-black" id="stat-sent">--</div>
+                <div class="text-2xl sm:text-3xl font-black leading-none" id="stat-sent">--</div>
+                <div id="stat-last-sent" class="text-[10px] sm:text-xs text-emerald-100 mt-2 opacity-90 font-medium"></div>
             </div>
         </div>
         <!-- Received -->
@@ -124,7 +125,8 @@
             <div class="absolute -right-4 -top-4 text-white opacity-10 group-hover:scale-110 transition-transform duration-500"><iconify-icon icon="mdi:message-arrow-left" class="text-6xl sm:text-8xl"></iconify-icon></div>
             <div class="relative z-10">
                 <h3 class="text-[10px] sm:text-xs font-bold text-indigo-100 uppercase tracking-wider mb-1 flex items-center gap-1 sm:gap-2"><iconify-icon icon="mdi:message-badge" class="text-base sm:text-lg"></iconify-icon> Pesan Diterima</h3>
-                <div class="text-2xl sm:text-3xl font-black" id="stat-received">--</div>
+                <div class="text-2xl sm:text-3xl font-black leading-none" id="stat-received">--</div>
+                <div id="stat-last-received" class="text-[10px] sm:text-xs text-indigo-100 mt-2 opacity-90 font-medium"></div>
             </div>
         </div>
     </div>
@@ -460,6 +462,10 @@
             
             document.getElementById('stat-sent').innerText = data.totalSent;
             document.getElementById('stat-received').innerText = data.totalReceived;
+            
+            const formatDate = (ts) => ts ? new Date(ts).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', second:'2-digit'}) : 'Belum ada';
+            document.getElementById('stat-last-sent').innerText = 'Terakhir: ' + formatDate(data.lastMsgSent);
+            document.getElementById('stat-last-received').innerText = 'Terakhir: ' + formatDate(data.lastMsgReceived);
             
             if (data.role === 'admin') {
                 document.getElementById('btnUserManagement').classList.remove('hidden');
