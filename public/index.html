@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
     <script>
         const cachedTheme = localStorage.getItem('theme-css');
         if (cachedTheme) {
@@ -618,7 +619,7 @@
     async function addDevice() {
         const id = document.getElementById('newSessionId').value.trim();
         const name = document.getElementById('newSessionName').value.trim();
-        if(!id || !name) return alert('ID dan Nama wajib diisi!');
+        if(!id || !name) return notyf.error('ID dan Nama wajib diisi!');
         
         await fetch(`${API_BASE}/devices/add`, {
             method: 'POST',
@@ -639,18 +640,18 @@
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ id, webhook_url: url })
         });
-        if(res.ok) alert('Webhook berhasil disimpan!');
+        if(res.ok) notyf.success('Webhook berhasil disimpan!');
     }
 
     async function deleteSession(id) {
-        if(!confirm(`Yakin ingin menghapus Device/Klien ${id}? Semua data sesi akan hilang.`)) return;
+        if(!(await customConfirm('Hapus Klien', `Yakin ingin menghapus Device/Klien ${id}? Semua data sesi akan hilang.`))) return;
         await fetch(`${API_BASE}/devices/delete?id=${id}`, { method: 'DELETE' });
         loadSessions();
     }
 
     async function controlSession(id, action) {
         let actionName = action === 'start' ? 'menjalankan' : 'menghentikan';
-        if(!confirm(`Yakin ingin ${actionName} device ${id}?`)) return;
+        if(!(await customConfirm('Konfirmasi', `Yakin ingin ${actionName} device ${id}?`, actionName === 'menghentikan'))) return;
         
         try {
             const res = await fetch(`${API_BASE}/devices/action`, {
@@ -663,14 +664,14 @@
             try {
                 data = JSON.parse(text);
             } catch(e) {
-                alert('Server mengembalikan HTML/Error:\n\n' + text.substring(0, 200));
+                notyf.error('Server mengembalikan HTML/Error:\n\n' + text.substring(0, 200));
                 return;
             }
             if (!data.success) {
-                alert('Gagal: ' + (data.error || 'Unknown error'));
+                notyf.error('Gagal: ' + (data.error || 'Unknown error'));
             }
         } catch(e) {
-            alert('Error: ' + e.message);
+            notyf.error('Error: ' + e.message);
         }
         loadSessions();
     }
@@ -743,13 +744,13 @@
             });
             const data = await res.json();
             if (data.success) {
-                alert('Password berhasil diubah!');
+                notyf.success('Password berhasil diubah!');
                 closeModal('changePasswordModal');
             } else {
-                alert('Gagal: ' + data.error);
+                notyf.error('Gagal: ' + data.error);
             }
         } catch (err) {
-            alert('Error: ' + err.message);
+            notyf.error('Error: ' + err.message);
         } finally {
             btn.innerHTML = 'Simpan Password <iconify-icon icon="mdi:content-save"></iconify-icon>';
             btn.disabled = false;
@@ -826,7 +827,7 @@
         const btn = document.getElementById('btnSendTest');
         const resText = document.getElementById('testResult');
 
-        if(!number || !msg) return alert('Nomor dan Pesan wajib diisi!');
+        if(!number || !msg) return notyf.error('Nomor dan Pesan wajib diisi!');
 
         btn.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> Mengirim...';
         btn.disabled = true;
@@ -867,7 +868,7 @@
                 btnElement.classList.remove('bg-emerald-500', 'text-white', 'border-emerald-500');
             }, 1500);
         }).catch(err => {
-            alert('Gagal menyalin teks.');
+            notyf.error('Gagal menyalin teks.');
         });
     }
 
@@ -925,10 +926,10 @@
                 passwordInput.value = '';
                 loadUsers();
             } else {
-                alert('Gagal: ' + data.error);
+                notyf.error('Gagal: ' + data.error);
             }
         } catch (e) {
-            alert('Error: ' + e.message);
+            notyf.error('Error: ' + e.message);
         }
     }
 
@@ -943,27 +944,27 @@
             });
             const data = await res.json();
             if (data.success) {
-                alert('Password berhasil diubah!');
+                notyf.success('Password berhasil diubah!');
             } else {
-                alert('Gagal: ' + data.error);
+                notyf.error('Gagal: ' + data.error);
             }
         } catch (e) {
-            alert('Error: ' + e.message);
+            notyf.error('Error: ' + e.message);
         }
     }
 
     async function deleteUser(id, username) {
-        if (!confirm(`Yakin ingin menghapus user ${username}?`)) return;
+        if (!(await customConfirm('Hapus User', `Yakin ingin menghapus user ${username}?`))) return;
         try {
             const res = await fetch(`${API_BASE}/users/${id}`, { method: 'DELETE' });
             const data = await res.json();
             if (data.success) {
                 loadUsers();
             } else {
-                alert('Gagal: ' + data.error);
+                notyf.error('Gagal: ' + data.error);
             }
         } catch (e) {
-            alert('Error: ' + e.message);
+            notyf.error('Error: ' + e.message);
         }
     }
 
@@ -1062,6 +1063,84 @@
             navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
         });
     }
+</script>
+
+<!-- Notyf Library -->
+<script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+
+<!-- Custom Tailwind Confirm Modal -->
+<div id="custom-confirm-modal" class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" id="custom-confirm-overlay"></div>
+    <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-11/12 max-w-md p-6 transform scale-95 transition-transform duration-300 border border-slate-200 dark:border-slate-700" id="custom-confirm-box">
+        <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
+                <iconify-icon icon="mdi:alert-circle-outline" class="text-3xl"></iconify-icon>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100" id="custom-confirm-title">Konfirmasi</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1" id="custom-confirm-message">Apakah Anda yakin?</p>
+            </div>
+        </div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button id="custom-confirm-cancel" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">Batal</button>
+            <button id="custom-confirm-ok" class="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-rose-500 hover:bg-rose-600 shadow-lg shadow-rose-500/30 transition-all active:scale-95">Ya, Lanjutkan</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Initialize Notyf
+    const notyf = new Notyf({
+        duration: 4000,
+        position: { x: 'right', y: 'top' },
+        types: [
+            { type: 'success', background: '#10b981', dismissible: true },
+            { type: 'error', background: '#f43f5e', dismissible: true }
+        ]
+    });
+
+    // Custom Confirm Function (Returns Promise)
+    window.customConfirm = function(title, message, isDanger = true) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('custom-confirm-modal');
+            const box = document.getElementById('custom-confirm-box');
+            const titleEl = document.getElementById('custom-confirm-title');
+            const msgEl = document.getElementById('custom-confirm-message');
+            const btnCancel = document.getElementById('custom-confirm-cancel');
+            const btnOk = document.getElementById('custom-confirm-ok');
+            const overlay = document.getElementById('custom-confirm-overlay');
+
+            titleEl.textContent = title;
+            msgEl.textContent = message;
+
+            if (isDanger) {
+                btnOk.className = "px-4 py-2 rounded-xl text-sm font-semibold text-white bg-rose-500 hover:bg-rose-600 shadow-lg shadow-rose-500/30 transition-all active:scale-95";
+            } else {
+                btnOk.className = "px-4 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-500 hover:bg-indigo-600 shadow-lg shadow-indigo-500/30 transition-all active:scale-95";
+            }
+
+            // Show modal
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            box.classList.remove('scale-95');
+            box.classList.add('scale-100');
+
+            const cleanup = () => {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                box.classList.remove('scale-100');
+                box.classList.add('scale-95');
+                btnOk.removeEventListener('click', onOk);
+                btnCancel.removeEventListener('click', onCancel);
+                overlay.removeEventListener('click', onCancel);
+            };
+
+            const onOk = () => { cleanup(); resolve(true); };
+            const onCancel = () => { cleanup(); resolve(false); };
+
+            btnOk.addEventListener('click', onOk);
+            btnCancel.addEventListener('click', onCancel);
+            overlay.addEventListener('click', onCancel);
+        });
+    };
 </script>
 </body>
 </html>

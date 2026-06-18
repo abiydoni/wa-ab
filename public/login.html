@@ -46,10 +46,16 @@ async function doLogin(e) {
     if (data.success) {
         window.location.href = '/';
     } else {
-        document.getElementById('error').style.display = 'block';
+        notyf.error(data.message || 'Username atau password salah!');
         btn.innerText = 'Masuk';
     }
 }
+</script>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+<script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+<script>
+    const notyf = new Notyf({ duration: 4000, position: { x: 'right', y: 'top' } });
 </script>
 
 </body>
