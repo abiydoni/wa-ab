@@ -819,6 +819,13 @@ app.delete('/api/devices/delete', requireAuth, async (req, res) => {
 app.get('/api/session/qr', requireAuth, async (req, res) => {
     const sessionId = req.query.id;
     if (!(await checkOwnership(req, res, sessionId))) return;
+    
+    // Auto-start jika sesi mati/kosong (misal habis dihapus oleh Auto-Nuke)
+    if (!activeSessions.has(sessionId) && !startingSessions.has(sessionId)) {
+        console.log(`[API] Memulai ulang sesi untuk generate QR: ${sessionId}`);
+        startSession(sessionId);
+    }
+
     const qrImage = qrCodes.get(sessionId);
     res.json({ qr: qrImage || null });
 });
