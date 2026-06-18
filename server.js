@@ -225,10 +225,11 @@ async function startSession(sessionId) {
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
         },
         printQRInTerminal: false,
-        browser: ['Ubuntu', 'Chrome', '20.0.04'],
+        browser: ['Wa-AB Gateway', 'Chrome', '120.0.0'],
         logger: pino({ level: 'error' }),
-        markOnlineOnConnect: true,
-        syncFullHistory: true,
+        markOnlineOnConnect: false,
+        syncFullHistory: false,
+        generateHighQualityLinkPreview: true,
         getMessage: async (key) => {
             return undefined;
         }
@@ -708,11 +709,14 @@ app.post('/api/device/test-message', requireAuth, async (req, res) => {
         
         // Resolve actual JID for personal numbers
         if (jid.endsWith('@s.whatsapp.net')) {
-            const [wa] = await sock.onWhatsApp(jid);
-            if (wa && wa.exists) {
-                jid = wa.jid;
-            } else {
-                return res.status(400).json({ error: "Nomor WhatsApp tidak terdaftar" });
+            try {
+                const waResult = await sock.onWhatsApp(jid);
+                if (waResult && waResult[0] && waResult[0].exists) {
+                    jid = waResult[0].jid;
+                }
+            } catch (err) {
+                // V7 sering memunculkan error pada onWhatsApp karena rate-limit, 
+                // biarkan saja dan coba kirim langsung.
             }
         }
 
@@ -863,11 +867,13 @@ app.post('/api/send-message', async (req, res) => {
 
         // Resolve actual JID for personal numbers
         if (jid.endsWith('@s.whatsapp.net')) {
-            const [wa] = await sock.onWhatsApp(jid);
-            if (wa && wa.exists) {
-                jid = wa.jid;
-            } else {
-                return res.status(400).json({ status: false, error: 'Nomor WhatsApp tidak terdaftar.' });
+            try {
+                const waResult = await sock.onWhatsApp(jid);
+                if (waResult && waResult[0] && waResult[0].exists) {
+                    jid = waResult[0].jid;
+                }
+            } catch (err) {
+                // Biarkan jalan terus jika onWhatsApp error (v7 bug/rate-limit)
             }
         }
 

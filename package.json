@@ -7,7 +7,7 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.23",
+    "@whiskeysockets/baileys": "latest",
     "axios": "^1.7.2",
     "bcryptjs": "^3.0.3",
     "express": "^4.19.2",
