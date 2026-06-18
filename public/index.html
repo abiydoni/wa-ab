@@ -963,7 +963,11 @@
 
     // Initialize
     loadSessions();
-    statsInterval = setInterval(() => { loadStats(); }, 3000);
+    statsInterval = setInterval(() => { 
+        loadStats(); 
+        // Auto-refresh the device list quietly so status badges are always accurate
+        loadSessions();
+    }, 3000);
     
     // Dynamic theme color from logo
     window.addEventListener('DOMContentLoaded', () => {

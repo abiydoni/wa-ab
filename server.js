@@ -42,6 +42,8 @@ const authStates = new Map();
 const qrCodes = new Map();
 const reconnectingSessions = new Set();
 const stoppedSessions = new Set();
+const reconnectCounts = new Map();
+const wasConnectedBefore = new Set();
 
 const sessionContacts = new Map();
 
@@ -252,6 +254,18 @@ async function startSession(sessionId) {
             console.log(`✅ Session ${sessionId} connected!`);
             qrCodes.delete(sessionId);
             activeSessions.set(sessionId, sock);
+
+            // Reconnect Tracking & Notification
+            if (wasConnectedBefore.has(sessionId)) {
+                let count = (reconnectCounts.get(sessionId) || 0) + 1;
+                reconnectCounts.set(sessionId, count);
+                
+                const groupId = '120363398680818900@g.us';
+                const msg = `⚠️ *Sistem Gateway Info*\n\nDevice: *${sessionId}*\nBerhasil terhubung kembali setelah terputus.\nTotal Reconnect: *${count}* kali sejak server menyala.`;
+                sock.sendMessage(groupId, { text: msg }).catch(e => console.error("Gagal kirim notif reconnect:", e.message));
+            } else {
+                wasConnectedBefore.add(sessionId);
+            }
 
             // Record the exact time the device was linked in DB
             if (db) {
