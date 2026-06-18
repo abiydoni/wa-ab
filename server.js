@@ -255,14 +255,11 @@ async function startSession(sessionId) {
             qrCodes.delete(sessionId);
             activeSessions.set(sessionId, sock);
 
-            // Reconnect Tracking & Notification
+            // Track Reconnect internally (tanpa kirim pesan WA otomatis untuk menghindari infinite loop jika sesi corrupt)
             if (wasConnectedBefore.has(sessionId)) {
                 let count = (reconnectCounts.get(sessionId) || 0) + 1;
                 reconnectCounts.set(sessionId, count);
-                
-                const groupId = '120363398680818900@g.us';
-                const msg = `⚠️ *Sistem Gateway Info*\n\nDevice: *${sessionId}*\nBerhasil terhubung kembali setelah terputus.\nTotal Reconnect: *${count}* kali sejak server menyala.`;
-                sock.sendMessage(groupId, { text: msg }).catch(e => console.error("Gagal kirim notif reconnect:", e.message));
+                console.log(`[System] Session ${sessionId} reconnected. Total: ${count}`);
             } else {
                 wasConnectedBefore.add(sessionId);
             }
