@@ -264,19 +264,20 @@ async function startSession(sessionId) {
                     disconnectHistory.delete(sessionId);
                     if (sock) {
                         try { await sock.logout(); console.log(`[${sessionId}] Logout berhasil.`); } catch(e){}
+                        try { sock.ws.close(); } catch(e){}
                     }
-                    setTimeout(() => {
-                        try { 
+                    try { 
+                        if (fs.existsSync(sessionPath)) {
                             fs.rmSync(sessionPath, { recursive: true, force: true }); 
                             console.log(`[${sessionId}] Folder sesi berhasil dihapus sampai bersih.`);
-                        } catch(e) {
-                            console.error(`[${sessionId}] Gagal hapus folder sesi:`, e.message);
-                            try {
-                                const files = fs.readdirSync(sessionPath);
-                                for (const file of files) fs.unlinkSync(path.join(sessionPath, file));
-                            } catch(err){}
                         }
-                    }, 2000);
+                    } catch(e) {
+                        console.error(`[${sessionId}] Gagal hapus folder sesi:`, e.message);
+                        try {
+                            const files = fs.readdirSync(sessionPath);
+                            for (const file of files) fs.unlinkSync(path.join(sessionPath, file));
+                        } catch(err){}
+                    }
                     sessionContacts.delete(sessionId);
                     authStates.delete(sessionId);
                     // Tidak di-reconnect lagi agar user scan QR baru
@@ -786,22 +787,22 @@ app.delete('/api/devices/delete', requireAuth, async (req, res) => {
     const sock = activeSessions.get(sessionId);
     if (sock) {
         try { await sock.logout(); } catch(e) {}
+        try { sock.ws.close(); } catch(e) {}
         activeSessions.delete(sessionId);
         qrCodes.delete(sessionId);
         authStates.delete(sessionId);
     }
     const sessionPath = path.join(sessionsDir, sessionId);
-    setTimeout(() => {
+    try { 
         if (fs.existsSync(sessionPath)) {
-            try { fs.rmSync(sessionPath, { recursive: true, force: true }); } 
-            catch(e) {
-                try {
-                    const files = fs.readdirSync(sessionPath);
-                    for (const file of files) fs.unlinkSync(path.join(sessionPath, file));
-                } catch(err){}
-            }
+            fs.rmSync(sessionPath, { recursive: true, force: true }); 
         }
-    }, 2000);
+    } catch(e) {
+        try {
+            const files = fs.readdirSync(sessionPath);
+            for (const file of files) fs.unlinkSync(path.join(sessionPath, file));
+        } catch(err){}
+    }
 
     res.json({ success: true });
 });
