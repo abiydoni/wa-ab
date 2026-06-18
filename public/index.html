@@ -539,7 +539,7 @@
                   
                   if (session.status === 'connected') {
                       badgeClass = 'bg-emerald-100 text-emerald-700 border-emerald-200';
-                      statusIconHtml = `<span class="relative flex h-2.5 w-2.5 mr-0.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span></span>`;
+                      statusIconHtml = `<span class="relative flex h-2.5 w-2.5 mr-0.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-600"></span></span>`;
                       statusText = 'Connected (' + (session.user?.name || session.user?.id.split(':')[0]) + ')';
                       timerHtml = `<span class="live-timer bg-emerald-600 text-white px-2 py-0.5 rounded text-xs font-mono shadow-sm inline-flex items-center gap-1" data-uptime="${session.uptimeSeconds}"><iconify-icon icon="mdi:circle-medium" class="animate-pulse"></iconify-icon> Online: <span class="time-text">${formatDigitalTimer(session.uptimeSeconds)}</span></span>`;
                   } else if (session.status === 'starting_or_waiting_qr') {
