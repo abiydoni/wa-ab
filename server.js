@@ -226,6 +226,7 @@ async function startSession(sessionId) {
         }
 
         if (connection === 'close') {
+            if (sock) sock.isActuallyConnected = false;
             const isStoppedByUser = stoppedSessions.has(sessionId);
             const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut && !isStoppedByUser;
             activeSessions.delete(sessionId);
@@ -247,6 +248,7 @@ async function startSession(sessionId) {
             }
         } else if (connection === 'open') {
             sock.connectedAt = Date.now();
+            sock.isActuallyConnected = true;
             console.log(`✅ Session ${sessionId} connected!`);
             qrCodes.delete(sessionId);
             activeSessions.set(sessionId, sock);
@@ -529,7 +531,7 @@ app.get('/api/devices', requireAuth, async (req, res) => {
         const sock = activeSessions.get(device.id);
         const hasSessionFolder = fs.existsSync(path.join(sessionsDir, device.id));
         let status = 'disconnected';
-        if (sock && sock.user) {
+        if (sock && sock.isActuallyConnected) {
             status = 'connected';
         } else if (activeSessions.has(device.id)) {
             status = 'starting_or_waiting_qr';
@@ -567,7 +569,7 @@ app.get('/api/stats', requireAuth, async (req, res) => {
         totalDevices = rows[0].total_dev || 0;
         
         // Count all connected sessions globally
-        connectedDevices = Array.from(activeSessions.values()).filter(sock => sock && sock.user).length;
+        connectedDevices = Array.from(activeSessions.values()).filter(sock => sock && sock.isActuallyConnected).length;
     } else {
         const [rows] = await db.query('SELECT id, msg_sent, msg_received FROM gateway_devices WHERE user_id = ?', [req.session.userId]);
         
@@ -577,7 +579,7 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             totalDevices++;
             
             const sock = activeSessions.get(row.id);
-            if (sock && sock.user) connectedDevices++;
+            if (sock && sock.isActuallyConnected) connectedDevices++;
         }
     }
     
@@ -601,7 +603,7 @@ app.get('/api/device/details', requireAuth, async (req, res) => {
 
     const sock = activeSessions.get(id);
     let groups = [];
-    if (sock && sock.user) {
+    if (sock && sock.isActuallyConnected) {
         try {
             const groupsDict = await Promise.race([
                 sock.groupFetchAllParticipating(),
@@ -628,7 +630,7 @@ app.post('/api/device/test-message', requireAuth, async (req, res) => {
     const { id, number, message } = req.body;
     if (!(await checkOwnership(req, res, id))) return;
     const sock = activeSessions.get(id);
-    if (!sock || !sock.user) return res.status(400).json({ error: "Device is disconnected" });
+    if (!sock || !sock.isActuallyConnected) return res.status(400).json({ error: "Device is disconnected" });
 
     try {
         let jid = formatPhone(number);
@@ -764,7 +766,7 @@ app.post('/api/send-message', async (req, res) => {
     }
 
     const sock = activeSessions.get(sessionId);
-    if (!sock || !sock.user) {
+    if (!sock || !sock.isActuallyConnected) {
         return res.status(401).json({ status: false, error: `Session ${sessionId} is not connected.` });
     }
 
@@ -814,7 +816,7 @@ setInterval(async () => {
                 const hasSessionFolder = fs.existsSync(sessionPath);
                 
                 // If the folder exists (has been logged in) but the socket is not fully connected
-                if (hasSessionFolder && (!sock || !sock.user) && !reconnectingSessions.has(sessionId)) {
+                if (hasSessionFolder && (!sock || !sock.isActuallyConnected) && !reconnectingSessions.has(sessionId)) {
                     console.log(`[Watchdog] Session ${sessionId} terdeteksi mati/menggantung. Mencoba restart otomatis...`);
                     if (sock) {
                         try { if (sock.ws) sock.ws.close(); } catch(e){}
