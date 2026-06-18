@@ -532,25 +532,25 @@
             }
 
             data.devices.forEach(session => {
-                let badgeClass = 'bg-rose-100 text-rose-700 border-rose-200';
-                let statusIcon = 'mdi:close-circle';
-                let statusText = 'Disconnected';
-                let timerHtml = '';
-                
-                if (session.status === 'connected') {
-                    badgeClass = 'bg-emerald-100 text-emerald-700 border-emerald-200';
-                    statusIcon = 'mdi:check-circle';
-                    statusText = 'Connected (' + (session.user?.name || session.user?.id.split(':')[0]) + ')';
-                    timerHtml = `<span class="live-timer bg-emerald-600 text-white px-2 py-0.5 rounded text-xs font-mono shadow-sm inline-flex items-center gap-1" data-uptime="${session.uptimeSeconds}"><iconify-icon icon="mdi:circle-medium" class="animate-pulse"></iconify-icon> Online: <span class="time-text">${formatDigitalTimer(session.uptimeSeconds)}</span></span>`;
-                } else if (session.status === 'starting_or_waiting_qr') {
-                    badgeClass = 'bg-amber-100 text-amber-700 border-amber-200';
-                    statusIcon = 'mdi:qrcode-scan';
-                    statusText = 'Waiting QR / Starting';
-                } else if (session.status === 'stopped') {
-                    badgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
-                    statusIcon = 'mdi:stop-circle-outline';
-                    statusText = 'Stopped';
-                }
+                  let badgeClass = 'bg-rose-100 text-rose-700 border-rose-200';
+                  let statusIconHtml = '<iconify-icon icon="mdi:close-circle"></iconify-icon>';
+                  let statusText = 'Disconnected';
+                  let timerHtml = '';
+                  
+                  if (session.status === 'connected') {
+                      badgeClass = 'bg-emerald-100 text-emerald-700 border-emerald-200';
+                      statusIconHtml = `<span class="relative flex h-2.5 w-2.5 mr-0.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span></span>`;
+                      statusText = 'Connected (' + (session.user?.name || session.user?.id.split(':')[0]) + ')';
+                      timerHtml = `<span class="live-timer bg-emerald-600 text-white px-2 py-0.5 rounded text-xs font-mono shadow-sm inline-flex items-center gap-1" data-uptime="${session.uptimeSeconds}"><iconify-icon icon="mdi:circle-medium" class="animate-pulse"></iconify-icon> Online: <span class="time-text">${formatDigitalTimer(session.uptimeSeconds)}</span></span>`;
+                  } else if (session.status === 'starting_or_waiting_qr') {
+                      badgeClass = 'bg-amber-100 text-amber-700 border-amber-200';
+                      statusIconHtml = '<iconify-icon icon="mdi:qrcode-scan"></iconify-icon>';
+                      statusText = 'Waiting QR / Starting';
+                  } else if (session.status === 'stopped') {
+                      badgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
+                      statusIconHtml = '<iconify-icon icon="mdi:stop-circle-outline"></iconify-icon>';
+                      statusText = 'Stopped';
+                  }
 
                 const card = document.createElement('div');
                 card.className = 'bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md transition-all relative overflow-hidden';
@@ -565,7 +565,7 @@
                                 </h3>
                                 <div class="flex flex-wrap items-center gap-2 mt-2">
                                     <span class="px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1 ${badgeClass} whitespace-nowrap">
-                                        <iconify-icon icon="${statusIcon}"></iconify-icon> ${statusText}
+                                        ${statusIconHtml} ${statusText}
                                     </span>
                                     ${timerHtml}
                                 </div>
@@ -677,6 +677,7 @@
     }
 
     async function logout() {
+        if (!(await customConfirm('Konfirmasi Keluar', 'Apakah Anda yakin ingin keluar (logout) dari dashboard?', false))) return;
         await fetch(`${API_BASE}/logout`, { method: 'POST' });
         window.location.href = '/login.html';
     }
