@@ -264,41 +264,28 @@ async function startSession(sessionId) {
                 disconnectHistory.set(sessionId, history);
 
                 if (history.length >= 5) {
-                    console.log(`[${sessionId}] 🚨 SESI CORRUPT TERDETEKSI (Putus 5x dalam semenit). Menghapus sesi secara otomatis!`);
-                    disconnectHistory.delete(sessionId);
-                    if (sock) {
-                        try { await sock.logout(); console.log(`[${sessionId}] Logout berhasil.`); } catch(e){}
-                        try { sock.ws.close(); } catch(e){}
-                    }
-                    try { 
-                        if (fs.existsSync(sessionPath)) {
-                            fs.rmSync(sessionPath, { recursive: true, force: true }); 
-                            console.log(`[${sessionId}] Folder sesi berhasil dihapus sampai bersih.`);
+                    console.log(`[${sessionId}] ⚠️ Jaringan tidak stabil terdeteksi (Putus 5x dalam semenit). Menunda reconnect...`);
+                }
+                
+                if (!reconnectingSessions.has(sessionId)) {
+                    reconnectingSessions.add(sessionId);
+                    console.log(`[${sessionId}] Connection closed due to: ${lastDisconnect.error?.message}. Reconnecting...`);
+                    // Jika sering putus, beri jeda lebih lama (15 detik) agar tidak membebani server
+                    const delay = history.length >= 5 ? 15000 : 5000;
+                    setTimeout(() => {
+                        reconnectingSessions.delete(sessionId);
+                        if (!activeSessions.has(sessionId) && !startingSessions.has(sessionId)) {
+                            startSession(sessionId);
                         }
-                    } catch(e) {
-                        console.error(`[${sessionId}] Gagal hapus folder sesi:`, e.message);
-                        try {
-                            const files = fs.readdirSync(sessionPath);
-                            for (const file of files) fs.unlinkSync(path.join(sessionPath, file));
-                        } catch(err){}
-                    }
-                    sessionContacts.delete(sessionId);
-                    authStates.delete(sessionId);
-                    // Tidak di-reconnect lagi agar user scan QR baru
-                } else {
-                    if (!reconnectingSessions.has(sessionId)) {
-                        reconnectingSessions.add(sessionId);
-                        console.log(`[${sessionId}] Connection closed due to: ${lastDisconnect.error?.message}. Reconnecting in 5s...`);
-                        setTimeout(() => {
-                            reconnectingSessions.delete(sessionId);
-                            if (!activeSessions.has(sessionId) && !startingSessions.has(sessionId)) {
-                                startSession(sessionId);
-                            }
-                        }, 5000);
-                    }
+                    }, delay);
                 }
             } else if (!isStoppedByUser) {
-                fs.rmSync(sessionPath, { recursive: true, force: true });
+                // Jeda 2 detik sebelum hapus folder agar file SQLite/LevelDB tidak terkunci (EBUSY)
+                setTimeout(() => {
+                    try {
+                        if (fs.existsSync(sessionPath)) fs.rmSync(sessionPath, { recursive: true, force: true });
+                    } catch(e) { console.error('Gagal hapus session:', e.message); }
+                }, 2000);
                 sessionContacts.delete(sessionId);
                 authStates.delete(sessionId);
             }
@@ -831,16 +818,24 @@ app.delete('/api/devices/delete', requireAuth, async (req, res) => {
         authStates.delete(sessionId);
     }
     const sessionPath = path.join(sessionsDir, sessionId);
-    try { 
-        if (fs.existsSync(sessionPath)) {
-            fs.rmSync(sessionPath, { recursive: true, force: true }); 
+    
+    // Beri jeda 2 detik agar Node.js / Baileys melepaskan kunci (lock) dari file SQLite/LevelDB
+    setTimeout(() => {
+        try { 
+            if (fs.existsSync(sessionPath)) {
+                fs.rmSync(sessionPath, { recursive: true, force: true }); 
+                console.log(`[API] Sesi ${sessionId} berhasil dihapus sampai bersih.`);
+            }
+        } catch(e) {
+            console.error(`[API] Gagal hapus folder sesi ${sessionId}:`, e.message);
+            try {
+                // Fallback: hapus isi filenya satu per satu jika folder masih terkunci
+                const files = fs.readdirSync(sessionPath);
+                for (const file of files) fs.unlinkSync(path.join(sessionPath, file));
+                fs.rmdirSync(sessionPath);
+            } catch(err){}
         }
-    } catch(e) {
-        try {
-            const files = fs.readdirSync(sessionPath);
-            for (const file of files) fs.unlinkSync(path.join(sessionPath, file));
-        } catch(err){}
-    }
+    }, 2000);
 
     res.json({ success: true });
 });
