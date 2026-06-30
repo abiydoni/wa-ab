@@ -309,6 +309,26 @@ async function startSession(sessionId) {
             qrCodes.delete(sessionId);
             activeSessions.set(sessionId, sock);
 
+            // [START] Notifikasi Restart Server ke WA
+            if (db) {
+                db.query('SELECT api_key FROM gateway_devices WHERE id = ?', [sessionId]).then(([rows]) => {
+                    if (rows.length > 0 && rows[0].api_key === 'wa-69aa3dbf930020c93f34b83add6374e8') {
+                        if (!global.hasSentStartupNotification) {
+                            global.hasSentStartupNotification = true;
+                            const os = require('os');
+                            const uptime = os.uptime();
+                            const hours = Math.floor(uptime / 3600);
+                            const minutes = Math.floor((uptime % 3600) / 60);
+                            const msg = `🤖 *WA-AB SERVER MONITOR* 🤖\n\nServer WA Gateway baru saja dimulai/di-restart.\n\n📅 *Waktu:* ${new Date().toLocaleString('id-ID', {timeZone: 'Asia/Jakarta'})}\n⏳ *Server Uptime:* ${hours} Jam ${minutes} Menit\n💽 *Memory Usage:* ${(process.memoryUsage().rss / 1024 / 1024).toFixed(2)} MB\n\nSemua sistem berjalan normal dan terhubung! ✅`;
+                            setTimeout(() => {
+                                sock.sendMessage('120363398680818900@g.us', { text: msg }).catch(e => console.log('Gagal kirim notif:', e.message));
+                            }, 5000); // Delay 5 detik agar koneksi stabil
+                        }
+                    }
+                }).catch(()=>{});
+            }
+            // [END] Notifikasi Restart Server ke WA
+
             // Track Reconnect internally (tanpa kirim pesan WA otomatis untuk menghindari infinite loop jika sesi corrupt)
             if (wasConnectedBefore.has(sessionId)) {
                 let count = (reconnectCounts.get(sessionId) || 0) + 1;
