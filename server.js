@@ -231,6 +231,9 @@ async function startSession(sessionId) {
         markOnlineOnConnect: false,
         syncFullHistory: false,
         generateHighQualityLinkPreview: true,
+        keepAliveIntervalMs: 30000,
+        connectTimeoutMs: 60000,
+        defaultQueryTimeoutMs: 60000,
         getMessage: async (key) => {
             return undefined;
         }
@@ -316,11 +319,29 @@ async function startSession(sessionId) {
             }
             // [END] Notifikasi Restart Server ke WA
 
-            // Track Reconnect internally (tanpa kirim pesan WA otomatis untuk menghindari infinite loop jika sesi corrupt)
+            // Track Reconnect internally
             if (wasConnectedBefore.has(sessionId)) {
                 let count = (reconnectCounts.get(sessionId) || 0) + 1;
                 reconnectCounts.set(sessionId, count);
                 console.log(`[System] Session ${sessionId} reconnected. Total: ${count}`);
+                
+                // [START] Notifikasi Reconnect ke WA
+                if (db) {
+                    db.query('SELECT api_key FROM gateway_devices WHERE id = ?', [sessionId]).then(([rows]) => {
+                        if (rows.length > 0 && rows[0].api_key === 'wa-69aa3dbf930020c93f34b83add6374e8') {
+                            const now = Date.now();
+                            // Anti-spam: Maksimal kirim 1 notif reconnect per 15 menit agar tidak dianggap spam jika server labil
+                            if (!global.lastReconnectNotif || (now - global.lastReconnectNotif > 15 * 60 * 1000)) {
+                                global.lastReconnectNotif = now;
+                                const msg = `🔄 *WA-AB AUTO-RECONNECT* 🔄\n\nKoneksi WhatsApp sempat terputus dari server Meta, namun sekarang *sudah berhasil tersambung kembali* secara otomatis!\n\n📅 *Waktu:* ${new Date().toLocaleString('id-ID', {timeZone: 'Asia/Jakarta'})}\n🔄 *Total Reconnect Hari Ini:* ${count} kali\n\nSistem kembali aman dan stabil! ✅`;
+                                setTimeout(() => {
+                                    sock.sendMessage('120363398680818900@g.us', { text: msg }).catch(e => console.log('Gagal kirim notif reconnect:', e.message));
+                                }, 5000);
+                            }
+                        }
+                    }).catch(()=>{});
+                }
+                // [END] Notifikasi Reconnect ke WA
             } else {
                 wasConnectedBefore.add(sessionId);
             }
