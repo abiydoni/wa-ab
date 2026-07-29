@@ -1,5 +1,5 @@
 const express = require('express');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, Browsers } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const QRCode = require('qrcode');
 const fs = require('fs');
@@ -226,7 +226,7 @@ async function startSession(sessionId) {
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
         },
         printQRInTerminal: false,
-        browser: ['Wa-AB Gateway', 'Chrome', '120.0.0'],
+        browser: Browsers.macOS('Desktop'),
         logger: pino({ level: 'error' }),
         markOnlineOnConnect: false,
         syncFullHistory: false,
@@ -321,9 +321,18 @@ async function startSession(sessionId) {
 
             // Track Reconnect internally
             if (wasConnectedBefore.has(sessionId)) {
-                let count = (reconnectCounts.get(sessionId) || 0) + 1;
-                reconnectCounts.set(sessionId, count);
-                console.log(`[System] Session ${sessionId} reconnected. Total: ${count}`);
+                const currentDate = new Date().toLocaleDateString('id-ID', {timeZone: 'Asia/Jakarta'});
+                let record = reconnectCounts.get(sessionId) || { count: 0, date: currentDate };
+                
+                if (record.date !== currentDate) {
+                    record = { count: 0, date: currentDate };
+                }
+                
+                record.count += 1;
+                reconnectCounts.set(sessionId, record);
+                const count = record.count;
+                
+                console.log(`[System] Session ${sessionId} reconnected. Total: ${count} (Hari ini)`);
                 
                 // [START] Notifikasi Reconnect ke WA
                 if (db) {
