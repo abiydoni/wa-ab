@@ -744,26 +744,26 @@
                 document.getElementById('modalStatus').innerHTML = '<span class="text-emerald-600 font-bold"><iconify-icon icon="mdi:check-circle"></iconify-icon> Berhasil Terhubung!</span>';
                 document.getElementById('qr-image').classList.add('hidden');
                 document.getElementById('qr-loader').classList.add('hidden');
-                clearInterval(qrCheckInterval);
-                setTimeout(() => { closeModal('qrModal'); loadSessions(); }, 1500);
+                if (qrCheckInterval) clearInterval(qrCheckInterval);
+                setTimeout(() => { closeModal('qrModal'); loadSessions(); }, 1200);
             } else {
                 qrRetryCount++;
-                const isForce = qrRetryCount === 3 || (qrRetryCount > 3 && qrRetryCount % 4 === 0);
-                const qrRes = await fetch(`${API_BASE}/session/qr?id=${sessionId}${isForce ? '&force=true' : ''}`);
+                const qrRes = await fetch(`${API_BASE}/session/qr?id=${sessionId}`);
                 const qrData = await qrRes.json();
-                if (qrData.qr) {
+                
+                if (qrData.connected) {
+                    document.getElementById('modalStatus').innerHTML = '<span class="text-emerald-600 font-bold"><iconify-icon icon="mdi:check-circle"></iconify-icon> Berhasil Terhubung!</span>';
+                    document.getElementById('qr-image').classList.add('hidden');
+                    document.getElementById('qr-loader').classList.add('hidden');
+                    if (qrCheckInterval) clearInterval(qrCheckInterval);
+                    setTimeout(() => { closeModal('qrModal'); loadSessions(); }, 1200);
+                } else if (qrData.qr) {
                     document.getElementById('modalStatus').innerText = 'Silakan scan QR di bawah ini:';
                     document.getElementById('qr-image').src = qrData.qr;
                     document.getElementById('qr-image').classList.remove('hidden');
                     document.getElementById('qr-loader').classList.add('hidden');
-                } else if (qrData.connected) {
-                    document.getElementById('modalStatus').innerHTML = '<span class="text-emerald-600 font-bold"><iconify-icon icon="mdi:check-circle"></iconify-icon> Berhasil Terhubung!</span>';
-                    document.getElementById('qr-image').classList.add('hidden');
-                    document.getElementById('qr-loader').classList.add('hidden');
-                    clearInterval(qrCheckInterval);
-                    setTimeout(() => { closeModal('qrModal'); loadSessions(); }, 1500);
                 } else {
-                    document.getElementById('modalStatus').innerText = 'Menyiapkan QR Code... (' + (qrRetryCount * 3) + 's)';
+                    document.getElementById('modalStatus').innerText = 'Menyiapkan / Menghubungkan sesi...';
                 }
             }
         } catch(e) {}
