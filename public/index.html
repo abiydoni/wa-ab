@@ -720,6 +720,14 @@
                 document.getElementById('qr-image').src = qrData.qr;
                 document.getElementById('qr-image').classList.remove('hidden');
                 document.getElementById('qr-loader').classList.add('hidden');
+            } else if (qrData.connected) {
+                document.getElementById('modalStatus').innerHTML = '<span class="text-emerald-600 font-bold"><iconify-icon icon="mdi:check-circle"></iconify-icon> Berhasil Terhubung!</span>';
+                document.getElementById('qr-image').classList.add('hidden');
+                document.getElementById('qr-loader').classList.add('hidden');
+                clearInterval(qrCheckInterval);
+                setTimeout(() => { closeModal('qrModal'); loadSessions(); }, 1500);
+            } else {
+                document.getElementById('modalStatus').innerText = 'Menunggu QR dari server WhatsApp...';
             }
         } catch(e) {
             notyf.error('Gagal reset QR: ' + e.message);
@@ -737,18 +745,25 @@
                 document.getElementById('qr-image').classList.add('hidden');
                 document.getElementById('qr-loader').classList.add('hidden');
                 clearInterval(qrCheckInterval);
-                setTimeout(() => { closeModal('qrModal'); loadSessions(); }, 2000);
+                setTimeout(() => { closeModal('qrModal'); loadSessions(); }, 1500);
             } else {
                 qrRetryCount++;
-                // Jika sudah 3x cek (9 detik) QR masih null, coba force reset otomatis
-                const isForce = qrRetryCount >= 3 && qrRetryCount % 3 === 0;
+                const isForce = qrRetryCount === 3 || (qrRetryCount > 3 && qrRetryCount % 4 === 0);
                 const qrRes = await fetch(`${API_BASE}/session/qr?id=${sessionId}${isForce ? '&force=true' : ''}`);
                 const qrData = await qrRes.json();
-                if(qrData.qr) {
+                if (qrData.qr) {
                     document.getElementById('modalStatus').innerText = 'Silakan scan QR di bawah ini:';
                     document.getElementById('qr-image').src = qrData.qr;
                     document.getElementById('qr-image').classList.remove('hidden');
                     document.getElementById('qr-loader').classList.add('hidden');
+                } else if (qrData.connected) {
+                    document.getElementById('modalStatus').innerHTML = '<span class="text-emerald-600 font-bold"><iconify-icon icon="mdi:check-circle"></iconify-icon> Berhasil Terhubung!</span>';
+                    document.getElementById('qr-image').classList.add('hidden');
+                    document.getElementById('qr-loader').classList.add('hidden');
+                    clearInterval(qrCheckInterval);
+                    setTimeout(() => { closeModal('qrModal'); loadSessions(); }, 1500);
+                } else {
+                    document.getElementById('modalStatus').innerText = 'Menyiapkan QR Code... (' + (qrRetryCount * 3) + 's)';
                 }
             }
         } catch(e) {}

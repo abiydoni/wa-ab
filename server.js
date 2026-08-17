@@ -190,7 +190,8 @@ async function startSession(sessionId) {
     const { state, saveCreds } = authState;
     let version = [2, 3000, 1015901307];
     try {
-        const res = await fetchLatestBaileysVersion();
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Version fetch timeout')), 2500));
+        const res = await Promise.race([fetchLatestBaileysVersion(), timeout]);
         if (res && res.version) version = res.version;
     } catch(e) {}
 
@@ -919,8 +920,17 @@ app.get('/api/session/qr', requireAuth, async (req, res) => {
         }
     }
 
-    const qrImage = qrCodes.get(sessionId);
-    res.json({ qr: qrImage || null, connected: false });
+    // Jika QR belum langsung tersedia, tunggu hingga 3.5 detik (cek tiap 500ms) agar response pertama langsung mendapat QR
+    let qrImage = qrCodes.get(sessionId);
+    if (!qrImage && !isConnected) {
+        for (let i = 0; i < 7; i++) {
+            await new Promise(r => setTimeout(r, 500));
+            qrImage = qrCodes.get(sessionId);
+            if (qrImage) break;
+        }
+    }
+
+    res.json({ qr: qrImage || null, connected: isConnected || false });
 });
 
 
