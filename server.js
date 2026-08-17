@@ -259,14 +259,13 @@ async function startSession(sessionId) {
         version,
         auth: {
             creds: state.creds,
-            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
+            keys: state.keys
         },
         printQRInTerminal: false,
         browser: Browsers.ubuntu('Chrome'),
         logger: pino({ level: 'error' }),
         markOnlineOnConnect: true,
         syncFullHistory: false,
-        shouldSyncHistory: () => false,
         generateHighQualityLinkPreview: false,
         keepAliveIntervalMs: 25000,
         connectTimeoutMs: 60000,
