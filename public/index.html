@@ -546,7 +546,12 @@
                   if (session.status === 'connected') {
                       badgeClass = 'bg-emerald-100 text-emerald-700 border-emerald-200';
                       statusIconHtml = `<span class="relative flex h-2.5 w-2.5 mr-0.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-600"></span></span>`;
-                      statusText = 'Connected (' + (session.user?.name || session.user?.id.split(':')[0]) + ')';
+                      let uName = 'Online';
+                      if (session.user && typeof session.user === 'object') {
+                          if (session.user.name) uName = session.user.name;
+                          else if (session.user.id && typeof session.user.id === 'string') uName = session.user.id.split(':')[0];
+                      }
+                      statusText = 'Connected (' + uName + ')';
                       timerHtml = `<span class="live-timer bg-emerald-600 text-white px-2 py-0.5 rounded text-xs font-mono shadow-sm inline-flex items-center gap-1" data-uptime="${session.uptimeSeconds}"><iconify-icon icon="mdi:circle-medium" class="animate-pulse"></iconify-icon> Online: <span class="time-text">${formatDigitalTimer(session.uptimeSeconds)}</span></span>`;
                   } else if (session.status === 'starting_or_waiting_qr') {
                       badgeClass = 'bg-amber-100 text-amber-700 border-amber-200';
@@ -736,35 +741,29 @@
 
     async function checkQR(sessionId) {
         try {
-            const res = await fetch(`${API_BASE}/devices`);
-            const data = await res.json();
-            const session = data.devices.find(d => d.id === sessionId);
+            const qrRes = await fetch(`${API_BASE}/session/qr?id=${sessionId}`);
+            const qrData = await qrRes.json();
             
-            if (session && session.status === 'connected') {
-                document.getElementById('modalStatus').innerHTML = '<span class="text-emerald-600 font-bold"><iconify-icon icon="mdi:check-circle"></iconify-icon> Berhasil Terhubung!</span>';
+            if (qrData.connected) {
+                document.getElementById('modalStatus').innerHTML = '<span class="text-emerald-600 font-bold text-base"><iconify-icon icon="mdi:check-circle" class="text-xl inline align-middle"></iconify-icon> Berhasil Terhubung!</span>';
                 document.getElementById('qr-image').classList.add('hidden');
                 document.getElementById('qr-loader').classList.add('hidden');
-                if (qrCheckInterval) clearInterval(qrCheckInterval);
-                setTimeout(() => { closeModal('qrModal'); loadSessions(); }, 1200);
-            } else {
-                qrRetryCount++;
-                const qrRes = await fetch(`${API_BASE}/session/qr?id=${sessionId}`);
-                const qrData = await qrRes.json();
-                
-                if (qrData.connected) {
-                    document.getElementById('modalStatus').innerHTML = '<span class="text-emerald-600 font-bold"><iconify-icon icon="mdi:check-circle"></iconify-icon> Berhasil Terhubung!</span>';
-                    document.getElementById('qr-image').classList.add('hidden');
-                    document.getElementById('qr-loader').classList.add('hidden');
-                    if (qrCheckInterval) clearInterval(qrCheckInterval);
-                    setTimeout(() => { closeModal('qrModal'); loadSessions(); }, 1200);
-                } else if (qrData.qr) {
-                    document.getElementById('modalStatus').innerText = 'Silakan scan QR di bawah ini:';
-                    document.getElementById('qr-image').src = qrData.qr;
-                    document.getElementById('qr-image').classList.remove('hidden');
-                    document.getElementById('qr-loader').classList.add('hidden');
-                } else {
-                    document.getElementById('modalStatus').innerText = 'Menyiapkan / Menghubungkan sesi...';
+                if (qrCheckInterval) {
+                    clearInterval(qrCheckInterval);
+                    qrCheckInterval = null;
                 }
+                notyf.success('WhatsApp Berhasil Terhubung!');
+                setTimeout(() => { 
+                    closeModal('qrModal'); 
+                    loadSessions(); 
+                }, 1200);
+            } else if (qrData.qr) {
+                document.getElementById('modalStatus').innerText = 'Silakan scan QR di bawah ini:';
+                document.getElementById('qr-image').src = qrData.qr;
+                document.getElementById('qr-image').classList.remove('hidden');
+                document.getElementById('qr-loader').classList.add('hidden');
+            } else {
+                document.getElementById('modalStatus').innerText = 'Menyiapkan / Menghubungkan sesi...';
             }
         } catch(e) {}
     }

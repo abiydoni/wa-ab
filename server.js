@@ -167,6 +167,22 @@ const formatPhone = (phone) => {
     return formatted + '@s.whatsapp.net';
 };
 
+function isSessionLinked(sessionId) {
+    const sock = activeSessions.get(sessionId);
+    if (sock && sock.isActuallyConnected) return true;
+
+    try {
+        const credsFile = path.join(sessionsDir, sessionId, 'creds.json');
+        if (fs.existsSync(credsFile)) {
+            const credsData = JSON.parse(fs.readFileSync(credsFile, 'utf8'));
+            if (credsData && credsData.me && credsData.me.id) {
+                return true;
+            }
+        }
+    } catch(e) {}
+    return false;
+}
+
 async function clearSessionFolder(sessionId) {
     const sessionPath = path.join(sessionsDir, sessionId);
     
@@ -673,7 +689,7 @@ app.get('/api/devices', requireAuth, async (req, res) => {
         let status = 'disconnected';
         if (device.is_stopped) {
             status = 'stopped';
-        } else if (sock && sock.isActuallyConnected) {
+        } else if (isSessionLinked(device.id)) {
             status = 'connected';
         } else if (activeSessions.has(device.id)) {
             status = 'starting_or_waiting_qr';
@@ -683,16 +699,29 @@ app.get('/api/devices', requireAuth, async (req, res) => {
             status = 'starting_or_waiting_qr';
         }
 
+        let user = null;
+        if (sock && sock.user) {
+            user = sock.user;
+        } else {
+            try {
+                const credsFile = path.join(sessionsDir, device.id, 'creds.json');
+                if (fs.existsSync(credsFile)) {
+                    const credsData = JSON.parse(fs.readFileSync(credsFile, 'utf8'));
+                    if (credsData && credsData.me) user = credsData.me;
+                }
+            } catch(e) {}
+        }
+
         let uptimeSeconds = 0;
         if (status === 'connected') {
             if (device.linked_at) {
                 uptimeSeconds = Math.floor((Date.now() - device.linked_at) / 1000);
             } else {
-                uptimeSeconds = sock.connectedAt ? Math.floor((Date.now() - sock.connectedAt) / 1000) : 0;
+                uptimeSeconds = sock && sock.connectedAt ? Math.floor((Date.now() - sock.connectedAt) / 1000) : 0;
             }
         }
 
-        return { ...device, status, user: sock ? sock.user : null, uptimeSeconds };
+        return { ...device, status, user, uptimeSeconds };
     });
 
     res.json({ devices });
@@ -913,12 +942,13 @@ app.get('/api/session/qr', requireAuth, async (req, res) => {
     if (!sessionId) return res.status(400).json({ error: "Parameter 'id' is required" });
     if (!(await checkOwnership(req, res, sessionId))) return;
     
-    const existingSock = activeSessions.get(sessionId);
-    const isConnected = existingSock && existingSock.isActuallyConnected;
+    const isConnected = isSessionLinked(sessionId);
 
     if (isConnected) {
         return res.json({ qr: null, connected: true });
     }
+
+    const existingSock = activeSessions.get(sessionId);
 
     // Jika force=true ATAU (sesi mati / socket terputus)
     if (force || !existingSock || !existingSock.isActuallyConnected) {
@@ -947,12 +977,15 @@ app.get('/api/session/qr', requireAuth, async (req, res) => {
     if (!qrImage && !isConnected) {
         for (let i = 0; i < 8; i++) {
             await new Promise(r => setTimeout(r, 500));
+            if (isSessionLinked(sessionId)) {
+                return res.json({ qr: null, connected: true });
+            }
             qrImage = qrCodes.get(sessionId);
             if (qrImage) break;
         }
     }
 
-    res.json({ qr: qrImage || null, connected: isConnected || false });
+    res.json({ qr: qrImage || null, connected: isSessionLinked(sessionId) });
 });
 
 
