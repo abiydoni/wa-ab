@@ -221,12 +221,14 @@ async function startSession(sessionId) {
     }
     
     const { state, saveCreds } = authState;
-    let version = [2, 3000, 1015901307];
+    let version = [2, 3000, 1043857760];
     try {
-        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Version fetch timeout')), 2500));
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Version fetch timeout')), 5000));
         const res = await Promise.race([fetchLatestBaileysVersion(), timeout]);
         if (res && res.version) version = res.version;
-    } catch(e) {}
+    } catch(e) {
+        console.log(`[Session ${sessionId}] Version fetch notice: using latest version ${version.join('.')}`);
+    }
 
     if (!sessionContacts.has(sessionId)) {
         let savedContacts = new Map();
@@ -251,7 +253,7 @@ async function startSession(sessionId) {
         } catch (e) {}
     };
 
-    console.log(`Starting session: ${sessionId}`);
+    console.log(`Starting session: ${sessionId} with version ${version.join('.')}`);
 
     const sock = makeWASocket({
         version,
@@ -264,8 +266,8 @@ async function startSession(sessionId) {
         logger: pino({ level: 'error' }),
         markOnlineOnConnect: false,
         syncFullHistory: false,
-        generateHighQualityLinkPreview: true,
-        keepAliveIntervalMs: 15000,
+        generateHighQualityLinkPreview: false,
+        keepAliveIntervalMs: 25000,
         connectTimeoutMs: 60000,
         defaultQueryTimeoutMs: 60000,
         retryRequestDelayMs: 2000,
