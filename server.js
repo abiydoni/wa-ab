@@ -298,7 +298,6 @@ async function startSession(sessionId) {
             
             activeSessions.delete(sessionId);
             qrCodes.delete(sessionId);
-            authStates.delete(sessionId);
 
             if (shouldReconnect) {
                 const now = Date.now();
@@ -322,6 +321,7 @@ async function startSession(sessionId) {
                 }
             } else if (!isStoppedByUser) {
                 console.log(`[${sessionId}] Sesi terputus permanen / logged out (code: ${statusCode}). Membersihkan folder sesi...`);
+                authStates.delete(sessionId);
                 setTimeout(() => {
                     try {
                         if (fs.existsSync(sessionPath)) fs.rmSync(sessionPath, { recursive: true, force: true });
