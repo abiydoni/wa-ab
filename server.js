@@ -167,6 +167,39 @@ const formatPhone = (phone) => {
     return formatted + '@s.whatsapp.net';
 };
 
+async function clearSessionFolder(sessionId) {
+    const sessionPath = path.join(sessionsDir, sessionId);
+    
+    const existingSock = activeSessions.get(sessionId);
+    if (existingSock) {
+        try { if (existingSock.ws) existingSock.ws.close(); } catch(e){}
+        try { if (existingSock.end) existingSock.end(undefined); } catch(e){}
+        activeSessions.delete(sessionId);
+    }
+
+    qrCodes.delete(sessionId);
+    authStates.delete(sessionId);
+    sessionContacts.delete(sessionId);
+
+    await new Promise(r => setTimeout(r, 300));
+
+    if (fs.existsSync(sessionPath)) {
+        try {
+            fs.rmSync(sessionPath, { recursive: true, force: true });
+            console.log(`[Session] Folder sesi ${sessionId} berhasil dihapus bersih.`);
+        } catch(e) {
+            console.error(`[Session] rmSync gagal, memproses fallback hapus file ${sessionId}:`, e.message);
+            try {
+                const files = fs.readdirSync(sessionPath);
+                for (const file of files) {
+                    try { fs.unlinkSync(path.join(sessionPath, file)); } catch(err){}
+                }
+                fs.rmdirSync(sessionPath);
+            } catch(err){}
+        }
+    }
+}
+
 async function startSession(sessionId) {
     if (activeSessions.has(sessionId) || startingSessions.has(sessionId)) {
         console.log(`[System] Mencegah startSession ganda untuk: ${sessionId}`);
@@ -890,26 +923,13 @@ app.get('/api/session/qr', requireAuth, async (req, res) => {
         if (!startingSessions.has(sessionId)) {
             console.log(`[API] Memulai / reset sesi untuk QR baru: ${sessionId} (force: ${force})`);
             
-            // Matikan socket lama jika ada tetapi tidak terhubung
-            if (existingSock) {
-                try { if (existingSock.ws) existingSock.ws.close(); } catch(e){}
-                try { if (existingSock.end) existingSock.end(undefined); } catch(e){}
-                activeSessions.delete(sessionId);
-            }
-            
-            qrCodes.delete(sessionId);
             stoppedSessions.delete(sessionId);
-            authStates.delete(sessionId);
             if (db) await db.query('UPDATE gateway_devices SET is_stopped = FALSE WHERE id = ?', [sessionId]).catch(()=>{});
 
-            // Hapus folder sesi usang jika force reset diminta agar Baileys meminta QR baru secara bersih
-            const sessionPath = path.join(sessionsDir, sessionId);
-            if (force) {
-                try {
-                    if (fs.existsSync(sessionPath)) {
-                        fs.rmSync(sessionPath, { recursive: true, force: true });
-                    }
-                } catch(e) { console.error(`[API] Gagal hapus folder sesi saat force reset:`, e.message); }
+            // Bersihkan sesi lama secara bersih jika force ATAU jika belum ada QR
+            const hasQr = qrCodes.has(sessionId);
+            if (force || !hasQr) {
+                await clearSessionFolder(sessionId);
             }
 
             try {
@@ -920,10 +940,10 @@ app.get('/api/session/qr', requireAuth, async (req, res) => {
         }
     }
 
-    // Jika QR belum langsung tersedia, tunggu hingga 3.5 detik (cek tiap 500ms) agar response pertama langsung mendapat QR
+    // Jika QR belum langsung tersedia, tunggu hingga 4 detik (cek tiap 500ms) agar response pertama langsung mendapat QR
     let qrImage = qrCodes.get(sessionId);
     if (!qrImage && !isConnected) {
-        for (let i = 0; i < 7; i++) {
+        for (let i = 0; i < 8; i++) {
             await new Promise(r => setTimeout(r, 500));
             qrImage = qrCodes.get(sessionId);
             if (qrImage) break;
