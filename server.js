@@ -264,8 +264,9 @@ async function startSession(sessionId) {
         printQRInTerminal: false,
         browser: Browsers.ubuntu('Chrome'),
         logger: pino({ level: 'error' }),
-        markOnlineOnConnect: false,
+        markOnlineOnConnect: true,
         syncFullHistory: false,
+        shouldSyncHistory: () => false,
         generateHighQualityLinkPreview: false,
         keepAliveIntervalMs: 25000,
         connectTimeoutMs: 60000,
@@ -336,26 +337,6 @@ async function startSession(sessionId) {
             qrCodes.delete(sessionId);
             activeSessions.set(sessionId, sock);
 
-            // [START] Notifikasi Restart Server ke WA
-            if (db) {
-                db.query('SELECT api_key FROM gateway_devices WHERE id = ?', [sessionId]).then(([rows]) => {
-                    if (rows.length > 0 && rows[0].api_key === 'wa-69aa3dbf930020c93f34b83add6374e8') {
-                        if (!global.hasSentStartupNotification) {
-                            global.hasSentStartupNotification = true;
-                            const os = require('os');
-                            const uptime = os.uptime();
-                            const hours = Math.floor(uptime / 3600);
-                            const minutes = Math.floor((uptime % 3600) / 60);
-                            const msg = `🤖 *WA-AB SERVER MONITOR* 🤖\n\nServer WA Gateway baru saja dimulai/di-restart.\n\n📅 *Waktu:* ${new Date().toLocaleString('id-ID', {timeZone: 'Asia/Jakarta'})}\n⏳ *Server Uptime:* ${hours} Jam ${minutes} Menit\n💽 *Memory Usage:* ${(process.memoryUsage().rss / 1024 / 1024).toFixed(2)} MB\n\nSemua sistem berjalan normal dan terhubung! ✅`;
-                            setTimeout(() => {
-                                sock.sendMessage('120363398680818900@g.us', { text: msg }).catch(e => console.log('Gagal kirim notif:', e.message));
-                            }, 5000); // Delay 5 detik agar koneksi stabil
-                        }
-                    }
-                }).catch(()=>{});
-            }
-            // [END] Notifikasi Restart Server ke WA
-
             // Track Reconnect internally
             if (wasConnectedBefore.has(sessionId)) {
                 const currentDate = new Date().toLocaleDateString('id-ID', {timeZone: 'Asia/Jakarta'});
@@ -367,23 +348,25 @@ async function startSession(sessionId) {
                 
                 record.count += 1;
                 reconnectCounts.set(sessionId, record);
-                const count = record.count;
-                
-                console.log(`[System] Session ${sessionId} reconnected. Total: ${count} (Hari ini)`);
-                
-                // [START] Notifikasi Reconnect ke WA
+
                 if (db) {
-                    db.query('SELECT api_key FROM gateway_devices WHERE id = ?', [sessionId]).then(([rows]) => {
-                        if (rows.length > 0 && rows[0].api_key === 'wa-69aa3dbf930020c93f34b83add6374e8') {
-                            const now = Date.now();
-                            // Anti-spam: Maksimal kirim 1 notif reconnect per 15 menit agar tidak dianggap spam jika server labil
-                            if (!global.lastReconnectNotif || (now - global.lastReconnectNotif > 15 * 60 * 1000)) {
-                                global.lastReconnectNotif = now;
-                                const msg = `🔄 *WA-AB AUTO-RECONNECT* 🔄\n\nKoneksi WhatsApp sempat terputus dari server Meta, namun sekarang *sudah berhasil tersambung kembali* secara otomatis!\n\n📅 *Waktu:* ${new Date().toLocaleString('id-ID', {timeZone: 'Asia/Jakarta'})}\n🔄 *Total Reconnect Hari Ini:* ${count} kali\n\nSistem kembali aman dan stabil! ✅`;
-                                setTimeout(() => {
-                                    sock.sendMessage('120363398680818900@g.us', { text: msg }).catch(e => console.log('Gagal kirim notif reconnect:', e.message));
-                                }, 5000);
-                            }
+                    db.query('SELECT name, user_id FROM gateway_devices WHERE id = ?', [sessionId]).then(([rows]) => {
+                        if (rows.length > 0) {
+                            const deviceName = rows[0].name;
+                            const userId = rows[0].user_id;
+                            
+                            db.query('SELECT username FROM admin_users WHERE id = ?', [userId]).then(([uRows]) => {
+                                const ownerName = uRows.length > 0 ? uRows[0].username : 'Unknown';
+                                const notifMsg = `⚠️ *PERINGATAN TERPUTUS (RECONNECT)* ⚠️\n\nKoneksi WhatsApp telah terputus dan berhasil terhubung kembali otomatis.\n\n📱 *Device Name:* ${deviceName}\n🆔 *Device ID:* ${sessionId}\n👤 *Owner:* ${ownerName}\n📊 *Total Reconnect Hari Ini:* ${record.count}x\n📅 *Waktu:* ${new Date().toLocaleString('id-ID', {timeZone: 'Asia/Jakarta'})}`;
+                                const targetJid = '120363398680818900@g.us';
+                                
+                                const mainSock = activeSessions.get('wa');
+                                if (mainSock && mainSock.isActuallyConnected) {
+                                    mainSock.sendMessage(targetJid, { text: notifMsg }).catch(()=>{});
+                                } else {
+                                    sock.sendMessage(targetJid, { text: notifMsg }).catch(()=>{});
+                                }
+                            }).catch(()=>{});
                         }
                     }).catch(()=>{});
                 }
@@ -410,46 +393,64 @@ async function startSession(sessionId) {
 
     sock.ev.on('creds.update', saveCreds);
 
-    // Track contacts manually
+    // Track contacts safely
     sock.ev.on('contacts.upsert', (contacts) => {
-        const map = sessionContacts.get(sessionId);
-        for (const contact of contacts) {
-            if (contact.id && contact.id.endsWith('@s.whatsapp.net')) {
-                map.set(contact.id, contact.name || contact.notify || contact.verifiedName || contact.id.split('@')[0]);
-            }
+        let map = sessionContacts.get(sessionId);
+        if (!map) {
+            map = new Map();
+            sessionContacts.set(sessionId, map);
         }
-        saveContacts();
-    });
-
-    sock.ev.on('contacts.update', (updates) => {
-        const map = sessionContacts.get(sessionId);
-        for (const update of updates) {
-            if (update.id && update.id.endsWith('@s.whatsapp.net') && (update.name || update.notify || update.verifiedName)) {
-                map.set(update.id, update.name || update.notify || update.verifiedName || update.id.split('@')[0]);
-            }
-        }
-        saveContacts();
-    });
-
-    sock.ev.on('messaging-history.set', ({ chats, contacts }) => {
-        const map = sessionContacts.get(sessionId);
-        if (contacts) {
+        try {
             for (const contact of contacts) {
                 if (contact.id && contact.id.endsWith('@s.whatsapp.net')) {
                     map.set(contact.id, contact.name || contact.notify || contact.verifiedName || contact.id.split('@')[0]);
                 }
             }
+            saveContacts();
+        } catch(e) {}
+    });
+
+    sock.ev.on('contacts.update', (updates) => {
+        let map = sessionContacts.get(sessionId);
+        if (!map) {
+            map = new Map();
+            sessionContacts.set(sessionId, map);
         }
-        if (chats) {
-            for (const chat of chats) {
-                if (chat.id && chat.id.endsWith('@s.whatsapp.net')) {
-                    if (!map.has(chat.id)) {
-                        map.set(chat.id, chat.name || chat.id.split('@')[0]);
+        try {
+            for (const update of updates) {
+                if (update.id && update.id.endsWith('@s.whatsapp.net') && (update.name || update.notify || update.verifiedName)) {
+                    map.set(update.id, update.name || update.notify || update.verifiedName || update.id.split('@')[0]);
+                }
+            }
+            saveContacts();
+        } catch(e) {}
+    });
+
+    sock.ev.on('messaging-history.set', ({ chats, contacts }) => {
+        let map = sessionContacts.get(sessionId);
+        if (!map) {
+            map = new Map();
+            sessionContacts.set(sessionId, map);
+        }
+        try {
+            if (contacts) {
+                for (const contact of contacts) {
+                    if (contact.id && contact.id.endsWith('@s.whatsapp.net')) {
+                        map.set(contact.id, contact.name || contact.notify || contact.verifiedName || contact.id.split('@')[0]);
                     }
                 }
             }
-        }
-        saveContacts();
+            if (chats) {
+                for (const chat of chats) {
+                    if (chat.id && chat.id.endsWith('@s.whatsapp.net')) {
+                        if (!map.has(chat.id)) {
+                            map.set(chat.id, chat.name || chat.id.split('@')[0]);
+                        }
+                    }
+                }
+            }
+            saveContacts();
+        } catch(e) {}
     });
 
     // WEBHOOK LOGIC: Send incoming messages to client apps
