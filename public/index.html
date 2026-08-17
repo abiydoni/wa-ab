@@ -172,6 +172,12 @@
         
         <h2 id="modalTitle" class="text-xl font-bold text-slate-800 mb-2">Scan QR Code</h2>
         <p id="modalStatus" class="text-sm text-slate-500 font-medium bg-slate-100 py-2 px-4 rounded-full inline-block">Memproses sesi koneksi...</p>
+        
+        <div class="mt-4">
+            <button id="btnForceQr" onclick="forceResetQR()" class="text-xs font-semibold text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-xl transition-colors flex items-center justify-center gap-1.5 mx-auto">
+                <iconify-icon icon="mdi:refresh"></iconify-icon> Reset & Dapatkan QR Baru
+            </button>
+        </div>
     </div>
 </div>
 
@@ -682,7 +688,12 @@
         window.location.href = '/login.html';
     }
 
+    let currentQrSessionId = null;
+    let qrRetryCount = 0;
+
     function showQR(sessionId) {
+        currentQrSessionId = sessionId;
+        qrRetryCount = 0;
         document.getElementById('qrModal').style.display = 'flex';
         document.getElementById('modalTitle').innerText = 'Scan QR - ' + sessionId;
         document.getElementById('modalStatus').innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> Memproses sesi koneksi...';
@@ -690,7 +701,29 @@
         document.getElementById('qr-loader').classList.remove('hidden');
         
         checkQR(sessionId);
+        if (qrCheckInterval) clearInterval(qrCheckInterval);
         qrCheckInterval = setInterval(() => checkQR(sessionId), 3000);
+    }
+
+    async function forceResetQR() {
+        if (!currentQrSessionId) return;
+        document.getElementById('modalStatus').innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> Meriset sesi & membuat QR baru...';
+        document.getElementById('qr-image').classList.add('hidden');
+        document.getElementById('qr-loader').classList.remove('hidden');
+        qrRetryCount = 0;
+        
+        try {
+            const qrRes = await fetch(`${API_BASE}/session/qr?id=${currentQrSessionId}&force=true`);
+            const qrData = await qrRes.json();
+            if (qrData.qr) {
+                document.getElementById('modalStatus').innerText = 'Silakan scan QR di bawah ini:';
+                document.getElementById('qr-image').src = qrData.qr;
+                document.getElementById('qr-image').classList.remove('hidden');
+                document.getElementById('qr-loader').classList.add('hidden');
+            }
+        } catch(e) {
+            notyf.error('Gagal reset QR: ' + e.message);
+        }
     }
 
     async function checkQR(sessionId) {
@@ -706,7 +739,10 @@
                 clearInterval(qrCheckInterval);
                 setTimeout(() => { closeModal('qrModal'); loadSessions(); }, 2000);
             } else {
-                const qrRes = await fetch(`${API_BASE}/session/qr?id=${sessionId}`);
+                qrRetryCount++;
+                // Jika sudah 3x cek (9 detik) QR masih null, coba force reset otomatis
+                const isForce = qrRetryCount >= 3 && qrRetryCount % 3 === 0;
+                const qrRes = await fetch(`${API_BASE}/session/qr?id=${sessionId}${isForce ? '&force=true' : ''}`);
                 const qrData = await qrRes.json();
                 if(qrData.qr) {
                     document.getElementById('modalStatus').innerText = 'Silakan scan QR di bawah ini:';

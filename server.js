@@ -226,14 +226,15 @@ async function startSession(sessionId) {
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
         },
         printQRInTerminal: false,
-        browser: Browsers.macOS('Desktop'),
+        browser: Browsers.ubuntu('Chrome'),
         logger: pino({ level: 'error' }),
         markOnlineOnConnect: false,
         syncFullHistory: false,
         generateHighQualityLinkPreview: true,
-        keepAliveIntervalMs: 30000,
+        keepAliveIntervalMs: 15000,
         connectTimeoutMs: 60000,
         defaultQueryTimeoutMs: 60000,
+        retryRequestDelayMs: 2000,
         getMessage: async (key) => {
             return undefined;
         }
@@ -254,43 +255,43 @@ async function startSession(sessionId) {
         if (connection === 'close') {
             if (sock) sock.isActuallyConnected = false;
             const isStoppedByUser = stoppedSessions.has(sessionId);
-            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut && !isStoppedByUser;
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
+            const isRestartRequired = statusCode === DisconnectReason.restartRequired || statusCode === 515 || statusCode === 428;
+            const shouldReconnect = !isLoggedOut && !isStoppedByUser;
+            
             activeSessions.delete(sessionId);
             qrCodes.delete(sessionId);
+            authStates.delete(sessionId);
 
             if (shouldReconnect) {
                 const now = Date.now();
                 let history = disconnectHistory.get(sessionId) || [];
-                // Filter hanya disconnect dalam 60 detik terakhir
+                // Filter disconnect dalam 60 detik terakhir
                 history = history.filter(t => now - t < 60000);
                 history.push(now);
                 disconnectHistory.set(sessionId, history);
 
-                if (history.length >= 5) {
-                    console.log(`[${sessionId}] ⚠️ Jaringan tidak stabil terdeteksi (Putus 5x dalam semenit). Menunda reconnect...`);
-                }
-                
                 if (!reconnectingSessions.has(sessionId)) {
                     reconnectingSessions.add(sessionId);
-                    console.log(`[${sessionId}] Connection closed due to: ${lastDisconnect.error?.message}. Reconnecting...`);
-                    // Jika sering putus, beri jeda lebih lama (15 detik) agar tidak membebani server
-                    const delay = history.length >= 5 ? 15000 : 5000;
+                    console.log(`[${sessionId}] Connection closed due to: ${lastDisconnect?.error?.message} (code: ${statusCode}). Reconnecting...`);
+                    // Jika restart required (515/428), reconnect secara instan (1s) agar koneksi tidak terputus lama
+                    let delay = isRestartRequired ? 1000 : (history.length >= 5 ? 15000 : 3000);
                     setTimeout(() => {
                         reconnectingSessions.delete(sessionId);
                         if (!activeSessions.has(sessionId) && !startingSessions.has(sessionId)) {
-                            startSession(sessionId);
+                            startSession(sessionId).catch(err => console.error(`[${sessionId}] Reconnect failed:`, err.message));
                         }
                     }, delay);
                 }
             } else if (!isStoppedByUser) {
-                // Jeda 2 detik sebelum hapus folder agar file SQLite/LevelDB tidak terkunci (EBUSY)
+                console.log(`[${sessionId}] Sesi terputus permanen / logged out (code: ${statusCode}). Membersihkan folder sesi...`);
                 setTimeout(() => {
                     try {
                         if (fs.existsSync(sessionPath)) fs.rmSync(sessionPath, { recursive: true, force: true });
                     } catch(e) { console.error('Gagal hapus session:', e.message); }
-                }, 2000);
+                }, 1500);
                 sessionContacts.delete(sessionId);
-                authStates.delete(sessionId);
             }
         } else if (connection === 'open') {
             sock.connectedAt = Date.now();
@@ -872,16 +873,54 @@ app.delete('/api/devices/delete', requireAuth, async (req, res) => {
 
 app.get('/api/session/qr', requireAuth, async (req, res) => {
     const sessionId = req.query.id;
+    const force = req.query.force === 'true';
+    if (!sessionId) return res.status(400).json({ error: "Parameter 'id' is required" });
     if (!(await checkOwnership(req, res, sessionId))) return;
     
-    // Auto-start jika sesi mati/kosong (misal habis dihapus oleh Auto-Nuke)
-    if (!activeSessions.has(sessionId) && !startingSessions.has(sessionId)) {
-        console.log(`[API] Memulai ulang sesi untuk generate QR: ${sessionId}`);
-        startSession(sessionId);
+    const existingSock = activeSessions.get(sessionId);
+    const isConnected = existingSock && existingSock.isActuallyConnected;
+
+    if (isConnected) {
+        return res.json({ qr: null, connected: true });
+    }
+
+    // Jika force=true ATAU (sesi mati / socket terputus)
+    if (force || !existingSock || !existingSock.isActuallyConnected) {
+        if (!startingSessions.has(sessionId)) {
+            console.log(`[API] Memulai / reset sesi untuk QR baru: ${sessionId} (force: ${force})`);
+            
+            // Matikan socket lama jika ada tetapi tidak terhubung
+            if (existingSock) {
+                try { if (existingSock.ws) existingSock.ws.close(); } catch(e){}
+                try { if (existingSock.end) existingSock.end(undefined); } catch(e){}
+                activeSessions.delete(sessionId);
+            }
+            
+            qrCodes.delete(sessionId);
+            stoppedSessions.delete(sessionId);
+            authStates.delete(sessionId);
+            if (db) await db.query('UPDATE gateway_devices SET is_stopped = FALSE WHERE id = ?', [sessionId]).catch(()=>{});
+
+            // Hapus folder sesi usang jika force reset diminta agar Baileys meminta QR baru secara bersih
+            const sessionPath = path.join(sessionsDir, sessionId);
+            if (force) {
+                try {
+                    if (fs.existsSync(sessionPath)) {
+                        fs.rmSync(sessionPath, { recursive: true, force: true });
+                    }
+                } catch(e) { console.error(`[API] Gagal hapus folder sesi saat force reset:`, e.message); }
+            }
+
+            try {
+                await startSession(sessionId);
+            } catch(e) {
+                console.error(`[API] Gagal startSession untuk QR:`, e.message);
+            }
+        }
     }
 
     const qrImage = qrCodes.get(sessionId);
-    res.json({ qr: qrImage || null });
+    res.json({ qr: qrImage || null, connected: false });
 });
 
 
